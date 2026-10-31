@@ -1,5 +1,6 @@
 ;;;; csvdt.lisp --- csvdt run over a buffer, a selection or banked lines, its result in a buffer of its own.
 ;;;; Copyright (C) 2025-2026 Michael A Jones.  GPL-3.0-or-later; see LICENSE.
+;;;; Needs: Tuatara 0.90.13
 ;;;;
 ;;;; A package, not part of the editor: loaded by (load-package "csvdt") in
 ;;;; the init file. It drives csvdt (github.com/YardQuit/csvdt), a program of
