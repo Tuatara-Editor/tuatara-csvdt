@@ -207,6 +207,17 @@ csvdt exited 100: '--utc' was given "0-i", which is not a column number. Columns
 one: `CSVDT=/path/to/csvdt`, else the one on the PATH; without one they are
 skipped, not passed.
 
+## Credits
+
+- csvdt, by the same author
+  ([github.com/YardQuit/csvdt](https://github.com/YardQuit/csvdt)): the
+  program this package runs, and where the timestamp and duration conversion
+  comes from.
+
+## License
+
+GPL-3.0-or-later; see `LICENSE` at the top of this repository.
+
 ## Working on it
 
 ```sh
