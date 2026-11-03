@@ -1,5 +1,6 @@
 ;;;; csvdt.lisp --- csvdt run over a buffer, a selection or banked lines, its result in a buffer of its own.
 ;;;; Copyright (C) 2025-2026 Michael A Jones.  GPL-3.0-or-later; see LICENSE.
+;;;; Needs: Tuatara 0.90.13
 ;;;;
 ;;;; A package, not part of the editor: loaded by (load-package "csvdt") in
 ;;;; the init file. It drives csvdt (github.com/YardQuit/csvdt), a program of
@@ -523,7 +524,8 @@ newline, is not inside it."
   "A run of csvdt over text of BUFFER, a job: PROGRAM run in DIRECTORY with
 ARGUMENTS, given the RANGES of ROPE, the text as it was when the run began,
 widened to whole records read with QUOTE-OCTET and DELIMITER (CSVDT-SETTLE)
-before they are sent, CRLF saying its line ends lose their carriage returns.
+before they are sent, CRLF (carriage return and line feed) saying its line
+ends lose their carriage returns.
 Once it ends, EXIT is csvdt's exit status, OUTPUT the octets it wrote and
 SAID what it said. SNAPPED, SPANNED and STRETCHES are for its report."
   program directory arguments rope ranges (quote-octet 34) (delimiter 44) crlf exit output said snapped spanned stretches)
@@ -537,8 +539,8 @@ SAID what it said. SNAPPED, SPANNED and STRETCHES are for its report."
   :left-words "csvdt was stopped, its output left out")
 
 (defun csvdt-send (job fd)
-  "Write JOB's ranges to FD, csvdt's standard input, a piece at a time: one
-file, each range ended by a newline, carriage returns before newlines taken
+  "Write JOB's ranges to the file descriptor (FD), csvdt's standard input,
+a piece at a time: one file, each range ended by a newline, carriage returns before newlines taken
 out where the buffer ends its lines with both. Stops when JOB is asked to, or
 when csvdt stops reading."
   (let ((rope (csvdt-job-rope job))
@@ -793,8 +795,8 @@ always that of the csvdt that runs."
 ;;; Keys
 
 (defun install-csvdt ()
-  "Bind the csvdt commands in CSV and TSV buffers under \\`C-c v': r
-\\[csvdt-run-dwim], b the buffer, SPC the selection, k the banked lines, ?
+  "Bind the csvdt commands in CSV and tab-separated values (TSV) buffers under
+\\`C-c v': r \\[csvdt-run-dwim], b the buffer, SPC the selection, k the banked lines, ?
 \\[csvdt-describe-run], h the help, v the version."
   (define-keys (mode-keymap 'csv-mode)
                '(("C-c v r" csvdt-run-dwim) ("C-c v b" csvdt-run-buffer) ("C-c v SPC" csvdt-run-region)
