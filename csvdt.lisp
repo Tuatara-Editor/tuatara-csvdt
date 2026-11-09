@@ -1,6 +1,6 @@
 ;;;; csvdt.lisp --- csvdt run over a buffer, a selection or banked lines, its result in a buffer of its own.
 ;;;; Copyright (C) 2025-2026 Michael A Jones.  GPL-3.0-or-later; see LICENSE.
-;;;; Needs: Tuatara 0.90.13
+;;;; Needs: Tuatara 0.90.20
 ;;;;
 ;;;; A package, not part of the editor: loaded by (load-package "csvdt") in
 ;;;; the init file. It drives csvdt (github.com/YardQuit/csvdt), a program of
@@ -26,6 +26,10 @@
 
 (in-package #:csvdt)
 
+(declare-package-needs
+ '("csvdt" "converts the timestamps and durations of CSV records" :required t
+   :install "get csvdt from github.com/YardQuit/csvdt"))
+
 ;;; Settings
 
 (define-package-setting *csvdt-program* "csvdt"
@@ -36,7 +40,7 @@ the command is run in.")
 
 (define-package-setting *csvdt-default-arguments* "-H -p"
   "The arguments a csvdt command line starts with, selected: typing replaces
-them, \\<minibuffer>\\[minibuffer-forward-char] keeps them to add to, \\[minibuffer-done] runs them as they
+them, \\<minibuffer>\\[minibuffer-forward-char] keeps them to add to, \\[minibuffer-finish] runs them as they
 are. The default is for a file with a header row, the header printed.
 
 They are selected rather than only offered because the two mistakes are not
@@ -235,7 +239,7 @@ in a list beside it: \\<minibuffer>\\[minibuffer-complete] while csvdt arguments
 (defun csvdt-read-arguments ()
   "Read a csvdt command line and split it (CSVDT-SPLIT-ARGUMENTS). It starts
 as *CSVDT-DEFAULT-ARGUMENTS*, selected: typing replaces it, \\<minibuffer>\\[minibuffer-forward-char] keeps
-it to add to, \\[minibuffer-done] runs it as it is. \\[minibuffer-complete] completes the option
+it to add to, \\[minibuffer-finish] runs it as it is. \\[minibuffer-complete] completes the option
 before the cursor, and \\[minibuffer-previous-history] and \\[minibuffer-next-history] go back and forth through the
 lines run before. The prompt names the csvdt that will run."
   (let ((line (read-string (format nil "csvdt arguments (~a): " (csvdt-cached-version))
@@ -353,11 +357,11 @@ reads with."
 
 (defun csvdt-line-start (rope position)
   "Where the line of ROPE holding POSITION starts."
-  (if (zerop (rope-bytes rope)) 0 (rope-line-start rope (min position (rope-bytes rope)))))
+  (if (zerop (rope-octet-length rope)) 0 (rope-line-start rope (min position (rope-octet-length rope)))))
 
 (defun csvdt-next-line-start (rope position)
   "Where the line after POSITION's line of ROPE starts, or the text's end."
-  (let ((size (rope-bytes rope)))
+  (let ((size (rope-octet-length rope)))
     (if (>= position size)
         size
         (min size (1+ (rope-line-end rope position))))))
@@ -368,7 +372,7 @@ reads with."
 
 (defun csvdt-line-end-p (rope position)
   "True when POSITION of ROPE is at the end of a line or of the text."
-  (or (>= position (rope-bytes rope))
+  (or (>= position (rope-octet-length rope))
       (member (rope-octet rope position) '(10 13))))
 
 (defun csvdt-whole-lines (rope start end)
@@ -387,7 +391,7 @@ its closing quote is (NIL when the text ends inside it), and where its record
 starts; NIL after the last. QUOTE-OCTET and DELIMITER are the octets read
 with: a quote opens a field only where a field begins, and a quote doubled
 inside one is one quote."
-  (let ((at 0) (size (rope-bytes rope)) (last-close nil) (record 0))
+  (let ((at 0) (size (rope-octet-length rope)) (last-close nil) (record 0))
     (flet ((next-quote () (and (< at size) (rope-find-octet rope quote-octet :start at :end size))))
       (lambda ()
         (loop
@@ -414,7 +418,7 @@ record as a record of its own, which converts cleanly into a field nobody
 wrote. QUOTE-OCTET and DELIMITER are the octets the run reads with. Only
 ever widens; a file whose fields hold no line ends is left as it is. The
 text is read once, from its start to the furthest place a range needs."
-  (let* ((size (rope-bytes rope))
+  (let* ((size (rope-octet-length rope))
          (next-run (csvdt-quoted-runs rope quote-octet delimiter))
          (runs (make-array 0 :adjustable t :fill-pointer 0)) (first-run 0)
          (places (sort (loop for (start . end) in ranges for k from 0
@@ -565,7 +569,7 @@ when csvdt stops reading."
                                  (unless (and (= octet 13)
                                               (= 10 (if (< (1+ i) end)
                                                         (aref piece (1+ i))
-                                                        (if (< (+ at n) (rope-bytes rope))
+                                                        (if (< (+ at n) (rope-octet-length rope))
                                                             (rope-octet rope (+ at n))
                                                             0))))
                                    (setf (aref out kept) octet)
@@ -695,13 +699,13 @@ arguments ask for one."
                :snapped (csvdt-mid-line-p (buffer-text b) selection))))
 
 (define-command csvdt-run-banked ()
-  "Run csvdt over the banked lines (\\[bank-selected-lines]) with arguments
+  "Run csvdt over the banked lines (\\[bank-lines]) with arguments
 read in the minibuffer, all of them as one file in the order of the buffer:
 a duration is measured across what was banked, not across what lies between.
 The header goes in front when the arguments ask for one. The lines stay
 banked."
   (let* ((b (current-buffer)) (banked (banked-spans b)))
-    (unless banked (error "~a" (substitute-command-keys "No banked lines: \\[bank-selected-lines] banks them")))
+    (unless banked (error "~a" (substitute-command-keys "No banked lines: \\[bank-lines] banks them")))
     (csvdt-run b banked (csvdt-read-arguments))))
 
 (define-command csvdt-run-dwim ()
@@ -711,7 +715,7 @@ not one or the other: the selection is most often the part not banked yet.
 Where they meet or overlap a line is sent once.
 The arguments are read in the minibuffer, *CSVDT-DEFAULT-ARGUMENTS*
 selected: typing replaces them, \\<minibuffer>\\[minibuffer-forward-char] keeps them to add to,
-\\[minibuffer-done] runs them; \\[minibuffer-complete] completes an option from those csvdt
+\\[minibuffer-finish] runs them; \\[minibuffer-complete] completes an option from those csvdt
 reports, and \\[minibuffer-previous-history] brings back a line run before. They are split as a shell
 splits them, a comma staying inside its argument. A filename among them is
 refused: the lines go to csvdt on its standard input, and a file would take

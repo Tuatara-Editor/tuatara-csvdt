@@ -215,8 +215,8 @@ killed first; the frontend, the editor and the output."
     (multiple-value-bind (f editor)
         (run-keys (list (lambda ()
                           (let ((b (tuatara.command:current-buffer)))
-                            (tuatara.defaults::bank-lines b (cons 5 33))
-                            (tuatara.defaults::bank-lines b (cons 61 89))))
+                            (tuatara.defaults::bank-span b (cons 5 33))
+                            (tuatara.defaults::bank-span b (cons 61 89))))
                         "M-x c s v d t - r u n - b a n k e d RET - H SPC - p SPC - u 0 SPC - i SPC 0 , r e p l a c e RET")
                   :text *csvdt-test-text* :width 120)
       (declare (ignore editor))
@@ -228,7 +228,7 @@ killed first; the frontend, the editor and the output."
     (multiple-value-bind (f editor)
         (run-keys (list (lambda ()
                           (let ((b (tuatara.command:current-buffer)))
-                            (tuatara.defaults::bank-lines b (cons 5 33))
+                            (tuatara.defaults::bank-span b (cons 5 33))
                             (setf (tuatara.buffer:buffer-mark b) 20 (tuatara.buffer:buffer-point b) 40
                                   (tuatara.buffer:buffer-mark-active-p b) t)))
                         "M-x c s v d t - r u n - d w i m RET - H SPC - p SPC - u 0 SPC - i SPC 0 , r e p l a c e RET")
@@ -237,7 +237,7 @@ killed first; the frontend, the editor and the output."
       (is string= (format nil "to_utc,x~%2026-07-25T10:00:00+00:00,a~%2026-07-26T10:00:00+00:00,b~%") (csvdt-test-output)))
     ;; describe-run counts what a run would cover without running
     (multiple-value-bind (f editor)
-        (run-keys (list (lambda () (tuatara.defaults::bank-lines (tuatara.command:current-buffer) (cons 5 33)))
+        (run-keys (list (lambda () (tuatara.defaults::bank-span (tuatara.command:current-buffer) (cons 5 33)))
                         "M-x c s v d t - d e s c r i b e - r u n RET")
                   :text *csvdt-test-text* :width 120)
       (declare (ignore editor))
@@ -248,7 +248,7 @@ killed first; the frontend, the editor and the output."
     ;; a run over *csvdt output* itself: its banks let go, its text replaced, still writable
     (csvdt-test-run "M-x c s v d t - r u n - b u f f e r RET RET")
     (let ((out (tuatara.buffer:find-buffer "*csvdt output*")))
-      (tuatara.defaults::bank-lines out (cons 5 33))
+      (tuatara.defaults::bank-span out (cons 5 33))
       (run-keys (list (lambda () (tuatara.command:show-buffer out))
                       "M-x c s v d t - r u n - b u f f e r RET - H SPC - p SPC - u 0 SPC - i SPC 0 , r e p l a c e RET")
                 :width 120)
@@ -394,7 +394,7 @@ records, read from the start one character at a time."
 (define-test (csvdt csvdt-describe-run-in-background)
   ;; what a run would cover is worked out away from the editor, and said
   (multiple-value-bind (f editor)
-      (run-keys (list (lambda () (tuatara.defaults::bank-lines (tuatara.command:current-buffer) (cons 5 33)))
+      (run-keys (list (lambda () (tuatara.defaults::bank-span (tuatara.command:current-buffer) (cons 5 33)))
                       "M-x c s v d t - d e s c r i b e - r u n RET")
                 :text *csvdt-test-text* :width 120)
     (declare (ignore editor))

@@ -136,7 +136,7 @@ reports, and fail if any other option csvdt reports is named in the package.
 `csvdt-run-dwim` takes the banked lines **and** the selection, merged so a
 line in both goes once; with neither, the whole buffer.
 
-Banked lines are Tuatara's own (`bank-selected-lines`, `m l` in NORMAL
+Banked lines are Tuatara's own (`bank-lines`, `m l` in NORMAL
 state). They go to csvdt as one file in buffer order, so a duration is
 measured across what was banked rather than across what lies between, and
 running over them leaves them banked.
