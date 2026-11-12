@@ -1,6 +1,6 @@
 ;;;; csvdt.lisp --- csvdt run over a buffer, a selection or banked lines, its result in a buffer of its own.
 ;;;; Copyright (C) 2025-2026 Michael A Jones.  GPL-3.0-or-later; see LICENSE.
-;;;; Needs: Tuatara 0.90.20
+;;;; Needs: Tuatara 0.90.25
 ;;;;
 ;;;; A package, not part of the editor: loaded by (load-package "csvdt") in
 ;;;; the init file. It drives csvdt (github.com/YardQuit/csvdt), a program of
@@ -33,49 +33,69 @@
 ;;; Settings
 
 (define-package-setting *csvdt-program* "csvdt"
-  "The csvdt program: a name, looked for on the PATH, or a path. A path with a
-slash in it means that file and is never looked for on the PATH; a relative
-one, \"./target/release/csvdt\", is taken from the directory of the buffer
-the command is run in.")
+  "The csvdt program to run.
+- a name: looked for on the PATH.
+- a path with a slash in it: that file, never looked for on the PATH. A
+  relative one, \"./target/release/csvdt\", is taken from the directory of the
+  buffer the command is run in."
+  :values string)
 
 (define-package-setting *csvdt-default-arguments* "-H -p"
-  "The arguments a csvdt command line starts with, selected: typing replaces
-them, \\<minibuffer>\\[minibuffer-forward-char] keeps them to add to, \\[minibuffer-finish] runs them as they
-are. The default is for a file with a header row, the header printed.
+  "The arguments a csvdt command line starts with, selected.
+Typing replaces them, \\<minibuffer>\\[minibuffer-forward-char] keeps them to
+add to, \\[minibuffer-finish] runs them as they are. The default is for a file
+with a header row, the header printed. Text with csvdt's options in it, \"\" for
+none.
 
 They are selected rather than only offered because the two mistakes are not
 alike. Leaving the header option off a file that has a header is loud: the
 header comes back as parse_err. Giving it to a file that has none is quiet:
 the first row is taken for a header and, by where the conversion puts its
 column, either goes through unconverted or is lost. Arguments to be noticed
-and deleted point at the quiet mistake; arguments to be kept do not.")
+and deleted point at the quiet mistake; arguments to be kept do not."
+  :values string)
 
 (define-package-setting *csvdt-region-carries-header* t
-  "True to put the buffer's header line in front of a selection or banked
-lines below it, when the arguments ask for a header. Without it csvdt takes
-the first selected row for the header, quietly: a header is exempt from the
-conversion, so that row goes through unconverted, or, where the conversion
-replaces its column, is lost. The header options are
-*CSVDT-HEADER-OPTIONS*.")
+  "Whether the buffer's header line goes in front of a selection or banked lines
+below it, when the arguments ask for a header.
+The header options are *CSVDT-HEADER-OPTIONS*.
+- t: put the header line in front.
+- nil: csvdt takes the first selected row for the header, quietly: a header is
+  exempt from the conversion, so that row goes through unconverted, or, where
+  the conversion replaces its column, is lost."
+  :values boolean)
 
 (define-package-setting *csvdt-header-options* '("-H" "--has-header")
-  "The csvdt options saying the first record is a header, which
-*CSVDT-REGION-CARRIES-HEADER* has to recognise. Should csvdt rename them,
-name the new ones here.")
+  "The csvdt options saying the first record is a header.
+*CSVDT-REGION-CARRIES-HEADER* has to recognise them. Should csvdt rename them,
+name the new ones here.
+- a list of texts: each is one such option, \"-H\" and \"--has-header\" by
+  default.
+- nil: none is recognised."
+  :values (list-of string))
 
 (define-package-setting *csvdt-single-quote-options* '("--single-quote")
-  "The csvdt options making ' the quote character. Where a record begins
-depends on which character quotes a field, so a run told to read single
-quotes has its records in other places.")
+  "The csvdt options making ' the quote character.
+Where a record begins depends on which character quotes a field, so a run told
+to read single quotes has its records in other places.
+- a list of texts: each is one such option, \"--single-quote\" by default.
+- nil: none is recognised."
+  :values (list-of string))
 
 (define-package-setting *csvdt-read-delimiter-options* '("--read-delimiter")
-  "The csvdt options setting the delimiter fields are read with. A quote only
-opens a field where a field begins, and where a field begins depends on the
-delimiter.")
+  "The csvdt options setting the delimiter fields are read with.
+A quote only opens a field where a field begins, and where a field begins
+depends on the delimiter.
+- a list of texts: each is one such option, \"--read-delimiter\" by default.
+- nil: none is recognised."
+  :values (list-of string))
 
 (define-package-setting *csvdt-output-mode* 'csv-mode
-  "The major mode of *csvdt output*. A mode that cannot be entered leaves the
-buffer in fundamental-mode rather than losing a run csvdt has done.")
+  "The major mode of *csvdt output*.
+A mode that cannot be entered leaves the buffer in fundamental-mode rather
+than losing a run csvdt has done.
+- a mode's name: the buffer is put in it, csv-mode by default."
+  :values function)
 
 (defparameter *csvdt-output-name* "*csvdt output*"
   "The name of the buffer csvdt's output is shown in.")
@@ -118,7 +138,9 @@ matter when there is none."
                         name
                         (path-join (or directory (buffer-directory (current-buffer))) name))))
           (case (path-kind path)
-            (:directory (error "~a is a directory, not the csvdt program: set *csvdt-program* to the program itself" path))
+            (:directory (error
+                         "~a is a directory, not the csvdt program: set *csvdt-program* to the program itself"
+                         path))
             ((nil) (error "Cannot find ~a: set *csvdt-program*" path))
             (t (or (find-program path)
                    (error "~a cannot be run: chmod +x it, or set *csvdt-program* to one that can" path)))))
@@ -214,7 +236,7 @@ be read as a filename."
 (defun csvdt-split-arguments (line)
   "LINE split into arguments as a shell would: a quoted argument may hold a
 space, an unquoted one a comma, which csvdt's value lists need. Either quote
-is taken; in double quotes the escapes \\t \\n \\r \\\\ \\\" and no others, in
+is taken; in double quotes the escapes \\t \\n \\r \\ \\\" and no others, in
 single quotes none. So a lone quote is written in the other kind, and a value
 keeping its backslashes in single quotes. Outside quotes a backslash is
 itself, unlike a shell: a Windows path typed as a value comes through whole."
@@ -532,7 +554,8 @@ before they are sent, CRLF (carriage return and line feed) saying its line
 ends lose their carriage returns.
 Once it ends, EXIT is csvdt's exit status, OUTPUT the octets it wrote and
 SAID what it said. SNAPPED, SPANNED and STRETCHES are for its report."
-  program directory arguments rope ranges (quote-octet 34) (delimiter 44) crlf exit output said snapped spanned stretches)
+  program directory arguments rope ranges (quote-octet 34) (delimiter 44) crlf exit output said snapped spanned
+  stretches)
 
 (setf (documentation 'csvdt-job-p 'function) "True when OBJECT is a CSVDT-JOB.")
 
@@ -648,7 +671,8 @@ unless the run was over *csvdt output* itself, which keeps its text."
            (progn
              (display-buffer (csvdt-fill-output output) :at :start)
              (message "~a"
-                      (format nil "csvdt~{ ~a~}: ~d line~:p~[~;~:;~:* from ~d stretches~]~:[~;, selection widened to whole lines~]~:[~;, widened to whole records: a quoted field spans lines~]~@[~%~a~]"
+                      (format nil
+                              "csvdt~{ ~a~}: ~d line~:p~[~;~:;~:* from ~d stretches~]~:[~;, selection widened to whole lines~]~:[~;, widened to whole records: a quoted field spans lines~]~@[~%~a~]"
                               (csvdt-job-arguments job) (csvdt-line-total output) (csvdt-job-stretches job)
                               (csvdt-job-snapped job) (csvdt-job-spanned job) (and (plusp (length said)) said))))
            (progn
@@ -669,12 +693,14 @@ line. The run goes on in the background when it takes more than a moment."
   (let* ((directory (buffer-directory buffer))
          (files (csvdt-file-arguments arguments directory)))
     (when files
-      (error "csvdt would read ~{~a~^, ~} and leave the selection out; these commands give it the lines on its standard input" files))
+      (error "csvdt would read ~{~a~^, ~} and leave the selection out; these commands give it the lines on its standard input"
+             files))
     (when (running-job buffer 'csvdt-job)
       (error "~a" (substitute-command-keys "csvdt is still running over this buffer: \\[stop-job] stops it")))
     (multiple-value-bind (quote-octet delimiter) (csvdt-dialect arguments)
-      (let ((job (make-csvdt-job :buffer buffer :program (csvdt-program directory) :directory directory :arguments arguments
-                                 :rope (buffer-text buffer) :ranges ranges :quote-octet quote-octet :delimiter delimiter
+      (let ((job (make-csvdt-job :buffer buffer :program (csvdt-program directory) :directory directory
+                                 :arguments arguments :rope (buffer-text buffer) :ranges ranges
+                                 :quote-octet quote-octet :delimiter delimiter
                                  :crlf (buffer-crlf-p buffer) :snapped snapped)))
         (start-job-thread job #'csvdt-work :name "tuatara csvdt" :details (format nil "~{~a~^ ~}" arguments))
         (take-in-soon job *csvdt-wait* "Running csvdt")))))
@@ -750,7 +776,9 @@ DELIMITER; ALL, both together settled."
   "Settle JOB's banked lines, its selection, and both together, as a run would."
   (let ((rope (csvdt-describe-job-rope job)))
     (flet ((settle (ranges)
-             (and ranges (values (csvdt-settle rope ranges (csvdt-describe-job-quote-octet job) (csvdt-describe-job-delimiter job))))))
+             (and ranges (values (csvdt-settle rope ranges
+                                               (csvdt-describe-job-quote-octet job)
+                                               (csvdt-describe-job-delimiter job))))))
       (let ((banked (csvdt-describe-job-banked job)) (selection (csvdt-describe-job-selection job)))
         (setf (csvdt-describe-job-all job) (settle (merge-ranges (append banked selection)))
               (csvdt-describe-job-banked job) (settle banked)
@@ -765,7 +793,8 @@ DELIMITER; ALL, both together settled."
                  (format nil "csvdt would run over ~a.  Banked: ~a.  Selection: ~a."
                          (if ranges
                              (csvdt-describe-ranges b ranges)
-                             (format nil "the whole buffer, ~d line~:p" (span-line-count b (list (cons 0 (buffer-size b))))))
+                             (format nil "the whole buffer, ~d line~:p"
+                                     (span-line-count b (list (cons 0 (buffer-size b))))))
                          (if banked (csvdt-describe-ranges b banked) "none")
                          (if selection (csvdt-describe-ranges b selection) "none"))))
       (message "~a" (job-ending-words job))))

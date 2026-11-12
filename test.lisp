@@ -53,7 +53,8 @@ selections widened to whole records, the header carried, and csvdt run over a bu
 
 (define-test (csvdt csvdt-option-lists)
   (let ((records (csvdt::csvdt-parse-option-list
-                  (format nil "# csvdt-option-list 1~%# short	long	value	separator	value-name~%-H	--has-header	none	none	~%-f	--flexible	optional	equals	keep~%"))))
+                  (format nil
+                          "# csvdt-option-list 1~%# short	long	value	separator	value-name~%-H	--has-header	none	none	~%-f	--flexible	optional	equals	keep~%"))))
     (is = 2 (length records))
     (is equal "--flexible" (getf (second records) :long))
     (is equal "equals" (getf (second records) :separator)))
@@ -62,13 +63,15 @@ selections widened to whole records, the header carried, and csvdt run over a bu
   (false (csvdt::csvdt-parse-option-list ""))
   ;; the --help fallback: options at the start of a line, the first of each
   (let ((records (csvdt::csvdt-parse-help
-                  (format nil "Options:~%  -H, --has-header  first row~%      --trim <T>  how~%      --trim again in prose~%"))))
+                  (format nil
+                          "Options:~%  -H, --has-header  first row~%      --trim <T>  how~%      --trim again in prose~%"))))
     (is equal '("--has-header" "--trim") (mapcar (lambda (r) (getf r :long)) records))
     (is equal "-H" (getf (first records) :short))
     (false (getf (first records) :value))))
 
 (define-test (csvdt csvdt-whole-records)
-  (let ((rope (csvdt-test-rope (format nil "h,when~%\"x~%y\",2026-07-25T12:00:00+02:00~%z,2026-07-26T12:00:00+02:00~%"))))
+  (let ((rope (csvdt-test-rope
+               (format nil "h,when~%\"x~%y\",2026-07-25T12:00:00+02:00~%z,2026-07-26T12:00:00+02:00~%"))))
     ;; a range starting inside a quoted field is widened back to its record
     (is equal (cons 7 41) (csvdt::csvdt-whole-records rope 10 41 34 44))
     ;; a place between records stays where it is
@@ -147,7 +150,8 @@ killed first; the frontend, the editor and the output."
 (define-test (csvdt csvdt-run-buffer)
   (with-csvdt ()
     ;; the arguments offered, selected, typed over
-    (multiple-value-bind (f editor out) (csvdt-test-run "M-x c s v d t - r u n - b u f f e r RET - H SPC - p SPC - u 0 SPC - i SPC 0 , r e p l a c e RET")
+    (multiple-value-bind (f editor out)
+        (csvdt-test-run "M-x c s v d t - r u n - b u f f e r RET - H SPC - p SPC - u 0 SPC - i SPC 0 , r e p l a c e RET")
       (declare (ignore editor))
       (is string= *csvdt-test-utc* out)
       (true (tuatara.frontend.fake:fake-frame-showing f "csvdt -H -p -u0 -i 0,replace: 4 lines")))
@@ -156,7 +160,8 @@ killed first; the frontend, the editor and the output."
       (declare (ignore f editor))
       (is string= *csvdt-test-text* out))
     ;; the right arrow keeps them, to add to
-    (multiple-value-bind (f editor out) (csvdt-test-run "M-x c s v d t - r u n - b u f f e r RET <right> SPC - u 0 SPC - i SPC 0 , r e p l a c e RET")
+    (multiple-value-bind (f editor out)
+        (csvdt-test-run "M-x c s v d t - r u n - b u f f e r RET <right> SPC - u 0 SPC - i SPC 0 , r e p l a c e RET")
       (declare (ignore f editor))
       (true (search "10:00:00+00:00" out)))
     ;; the source is never changed
@@ -175,7 +180,8 @@ killed first; the frontend, the editor and the output."
 (define-test (csvdt csvdt-completion-and-history)
   (with-csvdt ()
     ;; TAB completes the option before the cursor from those csvdt reports
-    (multiple-value-bind (f editor out) (csvdt-test-run "M-x c s v d t - r u n - b u f f e r RET - - h a s TAB SPC - p RET")
+    (multiple-value-bind (f editor out)
+        (csvdt-test-run "M-x c s v d t - r u n - b u f f e r RET - - h a s TAB SPC - p RET")
       (declare (ignore editor))
       (is string= *csvdt-test-text* out)
       (true (tuatara.frontend.fake:fake-frame-showing f "csvdt --has-header -p: 4 lines")))
@@ -190,13 +196,17 @@ killed first; the frontend, the editor and the output."
   (with-csvdt ()
     ;; from the middle of the first row to the middle of the second: both rows, whole, the header in front
     (multiple-value-bind (f editor out)
-        (csvdt-test-run "M-x c s v d t - r u n - r e g i o n RET - H SPC - p SPC - u 0 SPC - i SPC 0 , r e p l a c e RET" :point 12 :mark 40)
+        (csvdt-test-run
+         "M-x c s v d t - r u n - r e g i o n RET - H SPC - p SPC - u 0 SPC - i SPC 0 , r e p l a c e RET"
+         :point 12 :mark 40)
       (declare (ignore editor))
       (is string= (format nil "to_utc,x~%2026-07-25T10:00:00+00:00,a~%2026-07-26T10:00:00+00:00,b~%") out)
       (true (tuatara.frontend.fake:fake-frame-showing f "selection widened to whole lines")))
     ;; without a header asked for, nothing is put in front
     (multiple-value-bind (f editor out)
-        (csvdt-test-run "M-x c s v d t - r u n - r e g i o n RET - u 0 SPC - i SPC 0 , r e p l a c e RET" :point 33 :mark 61)
+        (csvdt-test-run
+         "M-x c s v d t - r u n - r e g i o n RET - u 0 SPC - i SPC 0 , r e p l a c e RET"
+         :point 33 :mark 61)
       (declare (ignore f editor))
       (is string= (format nil "2026-07-26T10:00:00+00:00,b~%") out))))
 
@@ -204,7 +214,8 @@ killed first; the frontend, the editor and the output."
   (with-csvdt ()
     ;; a buffer ending its lines with CR LF reaches csvdt with LF alone
     (csvdt-test-forget-output)
-    (run-keys-in-turns (list "M-x c s v d t - r u n - b u f f e r RET - H SPC - p SPC - u 0 SPC - i SPC 0 , r e p l a c e RET")
+    (run-keys-in-turns (list
+                        "M-x c s v d t - r u n - b u f f e r RET - H SPC - p SPC - u 0 SPC - i SPC 0 , r e p l a c e RET")
                        :text (format nil "ts,x~a~%2026-07-25T12:00:00+02:00,a~a~%" #\Return #\Return) :crlf t)
     (is string= (format nil "to_utc,x~%2026-07-25T10:00:00+00:00,a~%") (csvdt-test-output))))
 
@@ -220,7 +231,8 @@ killed first; the frontend, the editor and the output."
                         "M-x c s v d t - r u n - b a n k e d RET - H SPC - p SPC - u 0 SPC - i SPC 0 , r e p l a c e RET")
                   :text *csvdt-test-text* :width 120)
       (declare (ignore editor))
-      (is string= (format nil "to_utc,x~%2026-07-25T10:00:00+00:00,a~%2026-07-27T10:00:00+00:00,c~%") (csvdt-test-output))
+      (is string= (format nil "to_utc,x~%2026-07-25T10:00:00+00:00,a~%2026-07-27T10:00:00+00:00,c~%")
+          (csvdt-test-output))
       (true (tuatara.frontend.fake:fake-frame-showing f "3 lines from 2 stretches"))
       ;; the lines stay banked
       (is = 2 (length (tuatara:banked-spans (tuatara.buffer:find-buffer "*scratch*")))))
@@ -234,7 +246,8 @@ killed first; the frontend, the editor and the output."
                         "M-x c s v d t - r u n - d w i m RET - H SPC - p SPC - u 0 SPC - i SPC 0 , r e p l a c e RET")
                   :text *csvdt-test-text* :width 120)
       (declare (ignore f editor))
-      (is string= (format nil "to_utc,x~%2026-07-25T10:00:00+00:00,a~%2026-07-26T10:00:00+00:00,b~%") (csvdt-test-output)))
+      (is string= (format nil "to_utc,x~%2026-07-25T10:00:00+00:00,a~%2026-07-26T10:00:00+00:00,b~%")
+          (csvdt-test-output)))
     ;; describe-run counts what a run would cover without running
     (multiple-value-bind (f editor)
         (run-keys (list (lambda () (tuatara.defaults::bank-span (tuatara.command:current-buffer) (cons 5 33)))
@@ -352,7 +365,8 @@ records, read from the start one character at a time."
              (starts (loop for i from 0 to (length text)
                            when (or (zerop i) (char= (char text (1- i)) #\Newline)) collect i))
              (ranges (loop repeat (1+ (random 4))
-                           collect (let ((a (nth (random (length starts)) starts)) (b (nth (random (length starts)) starts)))
+                           collect (let ((a (nth (random (length starts)) starts))
+                                         (b (nth (random (length starts)) starts)))
                                      (cons (min a b) (max a b))))))
         (is equal (mapcar (lambda (r) (csvdt-test-records-around text (car r) (cdr r))) ranges)
             (csvdt::csvdt-records-around rope ranges 34 44)

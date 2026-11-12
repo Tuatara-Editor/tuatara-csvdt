@@ -56,15 +56,15 @@ buffer you run it in.
 
 The settings, each with its help in `C-h v`:
 
-| Setting | Default |
-|---|---|
-| `*csvdt-program*` | `"csvdt"` |
-| `*csvdt-default-arguments*` | `"-H -p"` |
-| `*csvdt-region-carries-header*` | `t` |
-| `*csvdt-header-options*` | `("-H" "--has-header")` |
-| `*csvdt-single-quote-options*` | `("--single-quote")` |
-| `*csvdt-read-delimiter-options*` | `("--read-delimiter")` |
-| `*csvdt-output-mode*` | `csv-mode` |
+| Setting | Default | Values |
+|---|---|---|
+| `*csvdt-program*` | `"csvdt"` | text |
+| `*csvdt-default-arguments*` | `"-H -p"` | text |
+| `*csvdt-region-carries-header*` | `t` | `t` or `nil` |
+| `*csvdt-header-options*` | `("-H" "--has-header")` | a list, each text |
+| `*csvdt-single-quote-options*` | `("--single-quote")` | a list, each text |
+| `*csvdt-read-delimiter-options*` | `("--read-delimiter")` | a list, each text |
+| `*csvdt-output-mode*` | `csv-mode` | a mode's name |
 
 ## Commands
 
@@ -225,7 +225,7 @@ tools/test.sh
 ```
 
 runs its tests against a Tuatara source tree: `../tuatara` beside this
-repository, or `../../tuatara` beside the folder it is in, unless
+repository, or `../../tuatara` beside the directory it is in, unless
 `TUATARA_SOURCE` names another. How a package is laid out and which of
 Tuatara's names it may use are in Tuatara's
 [HACKING.org](https://github.com/Tuatara-Editor/tuatara/blob/main/HACKING.org);
