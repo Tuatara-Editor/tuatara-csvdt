@@ -73,11 +73,11 @@ selections widened to whole records, the header carried, and csvdt run over a bu
   (let ((rope (csvdt-test-rope
                (format nil "h,when~%\"x~%y\",2026-07-25T12:00:00+02:00~%z,2026-07-26T12:00:00+02:00~%"))))
     ;; a range starting inside a quoted field is widened back to its record
-    (is equal (cons 7 41) (csvdt::csvdt-whole-records rope 10 41 34 44))
+    (is equal (cons 7 39) (csvdt::csvdt-whole-records rope 10 39 34 44))
     ;; a place between records stays where it is
-    (is equal (cons 41 41) (csvdt::csvdt-whole-records rope 41 41 34 44))
+    (is equal (cons 39 39) (csvdt::csvdt-whole-records rope 39 39 34 44))
     ;; a quote not where a field begins is data
-    (is equal (cons 7 7) (csvdt::csvdt-whole-records (csvdt-test-rope (format nil "a\"b,c~%d,e~%")) 7 7 34 44)))
+    (is equal (cons 6 6) (csvdt::csvdt-whole-records (csvdt-test-rope (format nil "a\"b,c~%d,e~%")) 6 6 34 44)))
   ;; single quotes and another delimiter, as the arguments name them
   (is equal '(39 59) (multiple-value-list (csvdt::csvdt-dialect '("--single-quote" "--read-delimiter" ";"))))
   (is equal '(34 9) (multiple-value-list (csvdt::csvdt-dialect (list (format nil "--read-delimiter=~c" #\Tab)))))
@@ -290,7 +290,7 @@ killed first; the frontend, the editor and the output."
       (true (tuatara.frontend.fake:fake-frame-showing f "csvdt exited")))
     ;; a program that is not there says which setting to set
     (let ((csvdt::*csvdt-program* "/no/such/csvdt"))
-      (fail (csvdt::csvdt-program "/")))))
+      (fail (csvdt::csvdt-program)))))
 
 (defun csvdt-test-take-in-consed (rows)
   "Octets consed per octet of output when a run of csvdt over ROWS rows is
@@ -413,3 +413,32 @@ records, read from the start one character at a time."
                 :text *csvdt-test-text* :width 120)
     (declare (ignore editor))
     (true (tuatara.frontend.fake:fake-frame-showing f "csvdt would run over 1 line in 1 stretch.  Banked: 1 line in 1 stretch.  Selection: none."))))
+
+(define-test (csvdt relative-program-refused)
+  ;; a relative program would be whatever file of that name stands beside the CSV file
+  (let ((csvdt::*csvdt-program* "./target/release/csvdt"))
+    (true (search "relative path"
+                  (handler-case (progn (csvdt::csvdt-program) "")
+                    (error (e) (princ-to-string e)))))))
+
+(define-test (csvdt program-in-a-directory-named-with-brackets)
+  ;; [, * and ? in the program's path are letters of its name, nothing else
+  (with-test-directory (dir)
+    (let* ((directory (format nil "~a[new]/" (namestring dir)))
+           (program (concatenate 'string directory "csvdt"))
+           (csvdt::*csvdt-options-cache* nil))
+      (sb-posix:mkdir directory #o700)
+      (with-open-file (o (sb-ext:parse-native-namestring program) :direction :output)
+        (format o "#!/bin/sh~%case \"$1\" in~%--version) echo 'csvdt 9.9.9';;~%~
+                   *) printf '# csvdt-option-list 1\\n-H\\t--has-header\\t\\t\\n';;~%esac~%"))
+      (sb-posix:chmod program #o755)
+      (let ((csvdt::*csvdt-program* program))
+        (is equal "--has-header" (getf (first (csvdt::csvdt-option-records)) :long))
+        (is string= "csvdt 9.9.9" (csvdt::csvdt-cached-version))))))
+
+(define-test (csvdt csvdt-record-left-open-ends-at-its-first-line)
+  ;; a quoted field never closed is read no further than a mebibyte: its record ends with its first line
+  (let ((rope (csvdt-test-rope (with-output-to-string (s)
+                                 (format s "\"open~%")
+                                 (dotimes (k 200000) (format s "v,~d~%" k))))))
+    (is equal (cons 0 6) (csvdt::csvdt-whole-records rope 0 6 34 44))))

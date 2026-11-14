@@ -43,10 +43,10 @@ csvdt is a program of its own, installed apart from Tuatara.
 5. **Check it**: `M-x check-health` says whether csvdt is found; then open a
    CSV file: `C-c v` shows its commands.
 
-If `csvdt` is not on the PATH, set `*csvdt-program*` after `:config`. A name
-with a slash in it means that file and is never looked for on the PATH; a
-relative one, `"./target/release/csvdt"`, is taken from the directory of the
-buffer you run it in.
+If `csvdt` is not on the PATH, set `*csvdt-program*` after `:config` to its
+full path, from `/` or `~`; that file is run and never looked for on the PATH.
+A relative path, `"./target/release/csvdt"`, is refused: it would run whatever
+file of that name stands beside the CSV file.
 
 ```lisp
 (load-package "csvdt" :source "https://github.com/Tuatara-Editor/tuatara-csvdt"

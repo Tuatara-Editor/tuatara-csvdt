@@ -1,6 +1,6 @@
 ;;;; csvdt.lisp --- csvdt run over a buffer, a selection or banked lines, its result in a buffer of its own.
 ;;;; Copyright (C) 2025-2026 Michael A Jones.  GPL-3.0-or-later; see LICENSE.
-;;;; Needs: Tuatara 0.90.25
+;;;; Needs: Tuatara 0.90.28
 ;;;;
 ;;;; A package, not part of the editor: loaded by (load-package "csvdt") in
 ;;;; the init file. It drives csvdt (github.com/YardQuit/csvdt), a program of
@@ -35,9 +35,9 @@
 (define-package-setting *csvdt-program* "csvdt"
   "The csvdt program to run.
 - a name: looked for on the PATH.
-- a path with a slash in it: that file, never looked for on the PATH. A
-  relative one, \"./target/release/csvdt\", is taken from the directory of the
-  buffer the command is run in."
+- a full path, from / or ~: that file, never looked for on the PATH. A
+  relative path is refused, for it would run whatever file of that name
+  stands in the directory of the CSV file."
   :values string)
 
 (define-package-setting *csvdt-default-arguments* "-H -p"
@@ -113,7 +113,7 @@ assumed here, and the list is read from --help instead.")
 
 (defvar *csvdt-options-cache* nil
   "The options of the csvdt last asked, as (PROGRAM STAMP VERSION . RECORDS):
-PROGRAM its real path, STAMP when it was written. A rebuilt csvdt has
+PROGRAM its path, STAMP what the system says of it. A rebuilt csvdt has
 another stamp and is asked again; one unchanged is not run again to find
 that out. VERSION is its --version line, asked at the same time.")
 
@@ -128,24 +128,24 @@ that out. VERSION is its --version line, asked at the same time.")
 a line end, a form feed or a vertical tab."
   (member char '(#\Space #\Tab #\Newline #\Return #\Page #.(code-char 11))))
 
-(defun csvdt-program (&optional directory)
-  "The full path of the csvdt program (*CSVDT-PROGRAM*), a relative path taken
-from DIRECTORY, else from the current buffer's; an error naming what is the
-matter when there is none."
-  (let ((name *csvdt-program*))
-    (if (find #\/ name)
-        (let ((path (if (char= (char name 0) #\/)
-                        name
-                        (path-join (or directory (buffer-directory (current-buffer))) name))))
-          (case (path-kind path)
-            (:directory (error
-                         "~a is a directory, not the csvdt program: set *csvdt-program* to the program itself"
-                         path))
-            ((nil) (error "Cannot find ~a: set *csvdt-program*" path))
-            (t (or (find-program path)
-                   (error "~a cannot be run: chmod +x it, or set *csvdt-program* to one that can" path)))))
-        (or (find-program name)
-            (error "Cannot find ~a on the PATH: set *csvdt-program* to its full path" name)))))
+(defun csvdt-program ()
+  "The full path of the csvdt program (*CSVDT-PROGRAM*), ~ there your home
+directory; an error naming what is the matter when there is none, or when it
+is a relative path."
+  (let ((path (if (uiop:string-prefix-p "~" *csvdt-program*)
+                  (native (expand-path *csvdt-program*))
+                  *csvdt-program*)))
+    (cond ((not (find #\/ path))
+           (or (find-program path)
+               (error "Cannot find ~a on the PATH: set *csvdt-program* to its full path" path)))
+          ((char/= (char path 0) #\/)
+           (error "*csvdt-program* is ~a, a relative path: set it to the program's full path" *csvdt-program*))
+          (t (case (path-kind path)
+               (:directory
+                (error "~a is a directory, not the csvdt program: set *csvdt-program* to the program itself" path))
+               ((nil) (error "Cannot find ~a: set *csvdt-program*" path))
+               (t (or (find-program path)
+                      (error "~a cannot be run: chmod +x it, or set *csvdt-program* to one that can" path))))))))
 
 (defun csvdt-output-of (&rest arguments)
   "What csvdt writes when run with ARGUMENTS and no input; NIL when it fails,
@@ -199,10 +199,10 @@ not known, and CSVDT-FILE-ARGUMENTS guesses at no filenames without it."
   "csvdt's options as records (CSVDT-PARSE-OPTION-LIST), from its own list,
 else from its --help; kept while the program is the same file, unchanged
 \(*CSVDT-OPTIONS-CACHE*)."
-  (let* ((program (namestring (truename (csvdt-program))))
-         (stamp (file-write-date program)))
+  (let* ((program (csvdt-program))
+         (stamp (path-stamp program)))
     (if (and (equal (first *csvdt-options-cache*) program)
-             (eql (second *csvdt-options-cache*) stamp))
+             (equalp (second *csvdt-options-cache*) stamp))
         (nthcdr 3 *csvdt-options-cache*)
         (let ((records (or (csvdt-parse-option-list (csvdt-output-of "--list-options"))
                            (csvdt-parse-help (csvdt-help-text)))))
@@ -251,8 +251,9 @@ completed from OPTIONS: three values, where it starts, POINT, and OPTIONS."
     (values (if space (1+ space) 0) point options)))
 
 (defun csvdt-complete-argument ()
-  "Complete the argument before the minibuffer's cursor from csvdt's options,
-in a list beside it: \\<minibuffer>\\[minibuffer-complete] while csvdt arguments are read."
+  "Complete the argument before the minibuffer's cursor from csvdt's options, in
+a list beside it: \\<minibuffer>\\[minibuffer-complete] while csvdt arguments
+are read."
   (let ((options (handler-case (csvdt-options)
                    (error (e) (message "~a" e) (return-from csvdt-complete-argument nil)))))
     (complete-in-minibuffer (lambda (text point) (csvdt-argument-at text point options))
@@ -260,10 +261,12 @@ in a list beside it: \\<minibuffer>\\[minibuffer-complete] while csvdt arguments
 
 (defun csvdt-read-arguments ()
   "Read a csvdt command line and split it (CSVDT-SPLIT-ARGUMENTS). It starts
-as *CSVDT-DEFAULT-ARGUMENTS*, selected: typing replaces it, \\<minibuffer>\\[minibuffer-forward-char] keeps
-it to add to, \\[minibuffer-finish] runs it as it is. \\[minibuffer-complete] completes the option
-before the cursor, and \\[minibuffer-previous-history] and \\[minibuffer-next-history] go back and forth through the
-lines run before. The prompt names the csvdt that will run."
+as *CSVDT-DEFAULT-ARGUMENTS*, selected: typing replaces it,
+\\<minibuffer>\\[minibuffer-forward-char] keeps it to add to,
+\\[minibuffer-finish] runs it as it is. \\[minibuffer-complete] completes
+the option before the cursor, and \\[minibuffer-previous-history] and
+\\[minibuffer-next-history] go back and forth through the lines run before.
+The prompt names the csvdt that will run."
   (let ((line (read-string (format nil "csvdt arguments (~a): " (csvdt-cached-version))
                            :initial *csvdt-default-arguments* :select-initial t
                            :complete #'csvdt-complete-argument :history *csvdt-history*)))
@@ -342,7 +345,8 @@ reported: a value taken for a filename would refuse a good run."
       (nreverse files))))
 
 (defun csvdt-options-before-positionals (arguments)
-  "ARGUMENTS up to --, after which everything is a filename, whatever it looks like."
+  "ARGUMENTS up to --, after which everything is a filename, whatever it looks
+like."
   (subseq arguments 0 (position "--" arguments :test #'string=)))
 
 (defun csvdt-header-requested-p (arguments)
@@ -406,31 +410,9 @@ to its newline."
         (to (if (and (> end start) (csvdt-line-start-p rope end)) end (csvdt-next-line-start rope end))))
     (cons from (max from to))))
 
-(defun csvdt-quoted-runs (rope quote-octet delimiter)
-  "A function giving the quoted fields of ROPE one by one, from its start, at
-each call the next as (OPEN CLOSE RECORD): where its opening quote is, where
-its closing quote is (NIL when the text ends inside it), and where its record
-starts; NIL after the last. QUOTE-OCTET and DELIMITER are the octets read
-with: a quote opens a field only where a field begins, and a quote doubled
-inside one is one quote."
-  (let ((at 0) (size (rope-octet-length rope)) (last-close nil) (record 0))
-    (flet ((next-quote () (and (< at size) (rope-find-octet rope quote-octet :start at :end size))))
-      (lambda ()
-        (loop
-          (let ((found (next-quote)))
-            (unless found (return nil))
-            (setf at (1+ found))
-            (when (or (zerop found) (member (rope-octet rope (1- found)) (list delimiter 10 13)))
-              ;; its record starts at its line's start, unless the field before reaches over that
-              (let ((line (rope-line-start rope found)))
-                (when (or (null last-close) (> line last-close)) (setf record line)))
-              (let ((close (loop for quote = (next-quote)
-                                 do (cond ((null quote) (setf at size) (return nil))
-                                          ((and (< (1+ quote) size) (= quote-octet (rope-octet rope (1+ quote))))
-                                           (setf at (+ quote 2)))
-                                          (t (setf at (1+ quote)) (return quote))))))
-                (setf last-close (or close size))
-                (return (list found close record))))))))))
+(defconstant +csvdt-walk-limit+ (* 1024 1024)
+  "How many octets past a record start known, CSVDT-RECORDS-AROUND reads on to
+reach a later place, rather than finding that place's record start afresh.")
 
 (defun csvdt-records-around (rope ranges quote-octet delimiter)
   "RANGES of ROPE, each (START . END) of whole lines, widened to whole records,
@@ -439,52 +421,31 @@ spans lines: a range starting inside one would hand csvdt the tail of a
 record as a record of its own, which converts cleanly into a field nobody
 wrote. QUOTE-OCTET and DELIMITER are the octets the run reads with. Only
 ever widens; a file whose fields hold no line ends is left as it is. The
-text is read once, from its start to the furthest place a range needs."
-  (let* ((size (rope-octet-length rope))
-         (next-run (csvdt-quoted-runs rope quote-octet delimiter))
-         (runs (make-array 0 :adjustable t :fill-pointer 0)) (first-run 0)
-         (places (sort (loop for (start . end) in ranges for k from 0
-                             collect (list start :start k) collect (list end :end k))
-                       #'< :key #'first))
-         (answers (make-array (* 2 (length ranges)))))
-    (labels ((nth-run (k)
-               ;; the K-th run from the first not yet passed, read when first needed
-               (loop while (>= (+ first-run k) (fill-pointer runs))
-                     do (let ((run (funcall next-run)))
-                          (if run (vector-push-extend run runs) (return-from nth-run nil))))
-               (aref runs (+ first-run k)))
-             (pass (place)
-               ;; leave behind the runs closed before PLACE
-               (loop for run = (nth-run 0)
-                     while (and run (second run) (< (second run) place))
-                     do (incf first-run)
-                        (when (= first-run (fill-pointer runs))
-                          (setf first-run 0 (fill-pointer runs) 0))))
-             (inside (run place) (and run (< (first run) place)))
-             (record-end (k close)
-               ;; the first line start after CLOSE, the K-th run's end, outside every run
-               (loop
-                 (when (null close) (return size))
-                 (let ((line (min size (1+ (rope-line-end rope close)))))
-                   (when (>= line size) (return size))
-                   (let ((spanning (loop for j from (1+ k)
-                                         for later = (nth-run j)
-                                         while (and later (< (first later) line))
-                                         when (or (null (second later)) (>= (second later) line))
-                                           return j)))
-                     (if spanning
-                         (setf k spanning close (second (nth-run spanning)))
-                         (return line)))))))
+places are taken in order, each read on from the record before it where that
+is near, so that many ranges cost one pass over the text."
+  (let ((size (rope-octet-length rope))
+        (known 0)
+        (places (sort (loop for (start . end) in ranges for k from 0
+                            collect (list start :start k) collect (list end :end k))
+                      #'< :key #'first))
+        (answers (make-array (* 2 (length ranges)))))
+    (flet ((record-start (place)
+             ;; where the record of the line starting at PLACE begins
+             (if (or (>= place size) (< place known) (>= (- place known) +csvdt-walk-limit+))
+                 (setf known (rope-record-start rope place :quote quote-octet :delimiter delimiter))
+                 (loop (let ((next (nth-value 1 (csv-record-end rope known :quote quote-octet :delimiter delimiter))))
+                         (when (or (> next place) (>= next size)) (return known))
+                         (setf known next))))))
       (loop for (place side k) in places
-            do (pass place)
-               (let ((run (nth-run 0)))
+            do (let ((start (record-start place)))
                  (setf (aref answers (+ (* 2 k) (if (eq side :start) 0 1)))
-                       (cond ((not (inside run place)) place)
-                             ((eq side :start) (third run))
-                             (t (record-end 0 (second run)))))))
-      (loop for k below (length ranges)
-            collect (let ((start (aref answers (* 2 k))))
-                      (cons start (max start (aref answers (1+ (* 2 k))))))))))
+                       (cond ((eq side :start) start)
+                             ((= start place) place)
+                             (t (nth-value 1 (csv-record-end rope start :quote quote-octet
+                                                                        :delimiter delimiter))))))))
+    (loop for k below (length ranges)
+          collect (let ((start (aref answers (* 2 k))))
+                    (cons start (max start (aref answers (1+ (* 2 k)))))))))
 
 (defun csvdt-whole-records (rope start end quote-octet delimiter)
   "START..END of ROPE, whole lines, widened to whole records, as (START . END)
@@ -567,9 +528,9 @@ SAID what it said. SNAPPED, SPANNED and STRETCHES are for its report."
 
 (defun csvdt-send (job fd)
   "Write JOB's ranges to the file descriptor (FD), csvdt's standard input,
-a piece at a time: one file, each range ended by a newline, carriage returns before newlines taken
-out where the buffer ends its lines with both. Stops when JOB is asked to, or
-when csvdt stops reading."
+a piece at a time: one file, each range ended by a newline, carriage returns
+before newlines taken out where the buffer ends its lines with both. Stops
+when JOB is asked to, or when csvdt stops reading."
   (let ((rope (csvdt-job-rope job))
         (piece (make-array *csvdt-piece* :element-type '(unsigned-byte 8)))
         (out (make-array *csvdt-piece* :element-type '(unsigned-byte 8)))
@@ -672,7 +633,9 @@ unless the run was over *csvdt output* itself, which keeps its text."
              (display-buffer (csvdt-fill-output output) :at :start)
              (message "~a"
                       (format nil
-                              "csvdt~{ ~a~}: ~d line~:p~[~;~:;~:* from ~d stretches~]~:[~;, selection widened to whole lines~]~:[~;, widened to whole records: a quoted field spans lines~]~@[~%~a~]"
+                              "csvdt~{ ~a~}: ~d line~:p~[~;~:;~:* from ~d stretches~]~
+                               ~:[~;, selection widened to whole lines~]~
+                               ~:[~;, widened to whole records: a quoted field spans lines~]~@[~%~a~]"
                               (csvdt-job-arguments job) (csvdt-line-total output) (csvdt-job-stretches job)
                               (csvdt-job-snapped job) (csvdt-job-spanned job) (and (plusp (length said)) said))))
            (progn
@@ -693,12 +656,13 @@ line. The run goes on in the background when it takes more than a moment."
   (let* ((directory (buffer-directory buffer))
          (files (csvdt-file-arguments arguments directory)))
     (when files
-      (error "csvdt would read ~{~a~^, ~} and leave the selection out; these commands give it the lines on its standard input"
+      (error "csvdt would read ~{~a~^, ~} and leave the selection out; ~
+              these commands give it the lines on its standard input"
              files))
     (when (running-job buffer 'csvdt-job)
       (error "~a" (substitute-command-keys "csvdt is still running over this buffer: \\[stop-job] stops it")))
     (multiple-value-bind (quote-octet delimiter) (csvdt-dialect arguments)
-      (let ((job (make-csvdt-job :buffer buffer :program (csvdt-program directory) :directory directory
+      (let ((job (make-csvdt-job :buffer buffer :program (csvdt-program) :directory directory
                                  :arguments arguments :rope (buffer-text buffer) :ranges ranges
                                  :quote-octet quote-octet :delimiter delimiter
                                  :crlf (buffer-crlf-p buffer) :snapped snapped)))
@@ -709,7 +673,8 @@ line. The run goes on in the background when it takes more than a moment."
 
 (define-command csvdt-run-buffer ()
   "Run csvdt over the whole buffer with arguments read in the minibuffer
-\(\\[csvdt-run-dwim] says how they are read); show what it writes in *csvdt output*."
+\(\\[csvdt-run-dwim] says how they are read); show what it writes in *csvdt
+output*."
   (let ((b (current-buffer)))
     (csvdt-run b (list (cons 0 (buffer-size b))) (csvdt-read-arguments))))
 
@@ -740,13 +705,14 @@ neither over the whole buffer; show what it writes in *csvdt output*. Both,
 not one or the other: the selection is most often the part not banked yet.
 Where they meet or overlap a line is sent once.
 The arguments are read in the minibuffer, *CSVDT-DEFAULT-ARGUMENTS*
-selected: typing replaces them, \\<minibuffer>\\[minibuffer-forward-char] keeps them to add to,
-\\[minibuffer-finish] runs them; \\[minibuffer-complete] completes an option from those csvdt
-reports, and \\[minibuffer-previous-history] brings back a line run before. They are split as a shell
-splits them, a comma staying inside its argument. A filename among them is
-refused: the lines go to csvdt on its standard input, and a file would take
-their place. \\[csvdt-describe-run] says what a run would cover, without
-running."
+selected: typing replaces them, \\<minibuffer>\\[minibuffer-forward-char]
+keeps them to add to, \\[minibuffer-finish] runs them;
+\\[minibuffer-complete] completes an option from those csvdt reports, and
+\\[minibuffer-previous-history] brings back a line run before. They are split
+as a shell splits them, a comma staying inside its argument. A filename among
+them is refused: the lines go to csvdt on its standard input, and a file
+would take their place. \\[csvdt-describe-run] says what a run would cover,
+without running."
   (let ((b (current-buffer)))
     (multiple-value-bind (banked selection) (csvdt-picked b)
       (let ((ranges (merge-ranges (append banked selection))))
@@ -829,8 +795,8 @@ always that of the csvdt that runs."
 
 (defun install-csvdt ()
   "Bind the csvdt commands in CSV and tab-separated values (TSV) buffers under
-\\`C-c v': r \\[csvdt-run-dwim], b the buffer, SPC the selection, k the banked lines, ?
-\\[csvdt-describe-run], h the help, v the version."
+\\`C-c v': r \\[csvdt-run-dwim], b the buffer, SPC the selection, k the banked
+lines, ? \\[csvdt-describe-run], h the help, v the version."
   (define-keys (mode-keymap 'csv-mode)
                '(("C-c v r" csvdt-run-dwim) ("C-c v b" csvdt-run-buffer) ("C-c v SPC" csvdt-run-region)
                  ("C-c v k" csvdt-run-banked) ("C-c v ?" csvdt-describe-run) ("C-c v h" csvdt-help)
