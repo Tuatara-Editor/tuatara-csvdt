@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src  'self'; img-src 'self' file:; script-src 'self'; base-uri 'none'; form-action 'none'">
+<title>csvdt Manual, all chapters</title>
+<link rel="icon" href="tuatara.png">
+<link rel="stylesheet" href="manual.css">
+<script src="manual.js" defer></script>
+</head>
+<body>
+<div class="site">
+<nav class="toc" id="contents" aria-label="Contents">
+<strong>csvdt Manual</strong>
+<small>for Tuatara 0.90.28 and later</small>
+<p class="tools"><a href="index.html">By chapter</a>
+<button type="button" class="theme" hidden>Dark</button></p>
+<input type="search" placeholder="Search the manual" aria-label="Search the manual">
+<ol class="chapters"><li id="nav-index"><a href="index.html">0 Contents</a></li><li id="nav-01-what-the-csvdt-package-is"><a href="#01-what-the-csvdt-package-is">1 What the csvdt package is</a><ol><li><a href="#01-what-the-csvdt-package-is--the-keys">1.1 The keys</a></li><li><a href="#01-what-the-csvdt-package-is--if-csvdt-is-not-found">1.2 If csvdt is not found</a></li></ol></li><li id="nav-02-what-gets-processed"><a href="#02-what-gets-processed">2 What gets processed</a><ol><li><a href="#02-what-gets-processed--whole-records">2.1 Whole records</a></li><li><a href="#02-what-gets-processed--the-header">2.2 The header</a></li><li><a href="#02-what-gets-processed--what-decides-where-a-record-begins">2.3 What decides where a record begins</a></li><li><a href="#02-what-gets-processed--the-bytes">2.4 The bytes</a></li></ol></li><li id="nav-03-arguments"><a href="#03-arguments">3 Arguments</a><ol><li><a href="#03-arguments--how-the-line-is-split">3.1 How the line is split</a></li><li><a href="#03-arguments--file-names">3.2 File names</a></li><li><a href="#03-arguments--what-csvdt-reports">3.3 What csvdt reports</a></li></ol></li><li id="nav-04-running-and-the-output"><a href="#04-running-and-the-output">4 Running, and the output</a><ol><li><a href="#04-running-and-the-output--a-run-is-a-job">4.1 A run is a job</a></li><li><a href="#04-running-and-the-output--the-output-buffer">4.2 The output buffer</a></li><li><a href="#04-running-and-the-output--the-echo-area">4.3 The echo area</a></li></ol></li><li id="nav-05-settings-and-the-csvdt-program"><a href="#05-settings-and-the-csvdt-program">5 Settings and the csvdt program</a><ol><li><a href="#05-settings-and-the-csvdt-program--the-csvdt-program">5.1 The csvdt program</a></li><li><a href="#05-settings-and-the-csvdt-program--the-arguments">5.2 The arguments</a></li><li><a href="#05-settings-and-the-csvdt-program--the-header">5.3 The header</a></li><li><a href="#05-settings-and-the-csvdt-program--the-names-of-csvdts-options">5.4 The names of csvdt's options</a></li><li><a href="#05-settings-and-the-csvdt-program--the-output-mode">5.5 The output mode</a></li><li><a href="#05-settings-and-the-csvdt-program--tests">5.6 Tests</a></li></ol></li><li id="nav-06-every-command-and-setting"><a href="#06-every-command-and-setting">6 Every command and setting</a><ol><li><a href="#06-every-command-and-setting--every-command">6.1 Every command</a></li><li><a href="#06-every-command-and-setting--every-setting">6.2 Every setting</a></li></ol></li></ol>
+</nav>
+<main>
+<article>
+<h1>csvdt Manual</h1>
+<p class="lead">for Tuatara 0.90.28 and later, every chapter on one page</p>
+<p>This manual is written with modal editing on, first and foremost. Where a command also has a key that works with modal editing off, it is given as well, as the non-modal key.</p>
+<section class="chapter" id="01-what-the-csvdt-package-is">
+<h1 id="01-what-the-csvdt-package-is--what-the-csvdt-package-is">What the csvdt package is</h1>
+<p class="lead">The package that runs the csvdt program over the records of a CSV buffer.</p>
+<p>csvdt converts the timestamps and durations in the records of a CSV file. The
+package hands it whole records from the buffer, in the background, and shows
+what csvdt writes in a buffer of its own, <code>*csvdt output*</code>. The buffer the
+records came from is never changed.</p>
+<p>csvdt is a program of its own, installed apart from Tuatara. Its options and
+what they do are in its own help; <kbd>C-c v h</kbd> shows it. This manual covers what
+the package adds: which records are sent, how the arguments are typed, and what
+happens to the result.</p>
+<h2 id="01-what-the-csvdt-package-is--the-keys"><span class="num">1.1</span> The keys</h2>
+<p>In a CSV or TSV (tab-separated values) buffer, the keys are under <kbd>C-c v</kbd>.
+Tuatara labels the prefix <code>csvdt</code> in its key help.</p>
+<div class="tablewrap"><table>
+<thead>
+<tr><th>Key</th><th>Command</th><th>What it runs csvdt over</th></tr>
+</thead>
+<tbody>
+<tr><td><kbd>C-c v r</kbd></td><td><code>csvdt-run-dwim</code></td><td>banked lines and selection, else all</td></tr>
+<tr><td><kbd>C-c v b</kbd></td><td><code>csvdt-run-buffer</code></td><td>the whole buffer</td></tr>
+<tr><td><kbd>C-c v SPC</kbd></td><td><code>csvdt-run-region</code></td><td>the selection</td></tr>
+<tr><td><kbd>C-c v k</kbd></td><td><code>csvdt-run-banked</code></td><td>the banked lines</td></tr>
+<tr><td><kbd>C-c v ?</kbd></td><td><code>csvdt-describe-run</code></td><td>nothing: says what a run would cover</td></tr>
+<tr><td><kbd>C-c v h</kbd></td><td><code>csvdt-help</code></td><td>nothing: shows csvdt's <code>--help</code></td></tr>
+<tr><td><kbd>C-c v v</kbd></td><td><code>csvdt-version</code></td><td>nothing: says which csvdt runs</td></tr>
+</tbody></table></div>
+<p>In any other buffer the commands are run with <kbd>M-x</kbd>, or from a key of your own
+in the init file:</p>
+<pre class="ex"><code class="language-lisp">(bind-key &quot;; c&quot; 'csvdt-run-dwim :map :leader)   ; SPC ; c
+</code></pre>
+<h2 id="01-what-the-csvdt-package-is--if-csvdt-is-not-found"><span class="num">1.2</span> If csvdt is not found</h2>
+<p><kbd>M-x check-health</kbd> says whether Tuatara finds csvdt. When it does not, chapter 5
+says how to name its path.</p>
+</section>
+<section class="chapter" id="02-what-gets-processed">
+<h1 id="02-what-gets-processed--what-gets-processed">What gets processed</h1>
+<p class="lead">Which lines go to csvdt, and how they are widened to whole records.</p>
+<p><code>csvdt-run-dwim</code> takes the banked lines and the selection together, merged so a
+line in both goes once. With neither, it takes the whole buffer.</p>
+<p>Banked lines are Tuatara's own (<code>bank-lines</code>, <kbd>m l</kbd> in normal state). They go to
+csvdt as one file in buffer order, so a duration is measured across what was
+banked rather than across the lines between. Running over them leaves them
+banked.</p>
+<p>The selection is taken as <kbd>y</kbd> and <kbd>d</kbd> take it: a line selection whole, a
+rectangle by the rows it spans. A rectangle's columns are ignored, because
+picking columns is csvdt's job (<code>--remove</code>, <code>-a</code>). A run takes the main
+selection only, not the places of several cursors or of a split.</p>
+<p><code>csvdt-describe-run</code> says what a run would cover, without running it. It has no
+line of arguments to read yet, so it reads them from
+<code>*csvdt-default-arguments*</code>. It works in the background too.</p>
+<h2 id="02-what-gets-processed--whole-records"><span class="num">2.1</span> Whole records</h2>
+<p>Whatever was picked, whole records are what go out.</p>
+<ul>
+<li>A selection that starts or ends inside a line takes the whole line. The run
+  says <code>, selection widened to whole lines</code>.</li>
+<li>A quoted field can hold a line end, so a record is not always a line. The
+  range is pushed out to record boundaries, and the run says <code>, widened to
+  whole records: a quoted field spans lines</code>. Finding the boundaries reads the
+  buffer once, quote to quote, from its start to the last range, as part of the
+  run in the background. A whole-buffer run reads nothing.</li>
+<li>Two banked lines inside one multi-line record widen to the same record, and
+  it is sent once.</li>
+</ul>
+<h2 id="02-what-gets-processed--the-header"><span class="num">2.2</span> The header</h2>
+<p>When the arguments ask for a header and what is sent starts below it, the
+buffer's header record goes in front. Then csvdt does not take the first
+selected row for the header. Set <code>*csvdt-region-carries-header*</code> to <code>nil</code> to
+stop this. csvdt then takes the first selected row for the header without
+saying so, and that row goes through unconverted.</p>
+<h2 id="02-what-gets-processed--what-decides-where-a-record-begins"><span class="num">2.3</span> What decides where a record begins</h2>
+<p><code>--single-quote</code> and <code>--read-delimiter</code> are read from the arguments before any
+of the above, because they decide where a record begins. A quote only opens a
+field where a field begins, and that depends on the delimiter. The names of
+the options that do this are in settings, chapter 5.</p>
+<h2 id="02-what-gets-processed--the-bytes"><span class="num">2.4</span> The bytes</h2>
+<p>The buffer's bytes go to csvdt as they are. A file that is not UTF-8 reaches
+csvdt as it is on disk, and csvdt refuses it in its own words. Line ends are
+sent as <code>\n</code> when the buffer's are <code>\r\n</code>.</p>
+</section>
+<section class="chapter" id="03-arguments">
+<h1 id="03-arguments--arguments">Arguments</h1>
+<p class="lead">The line of csvdt options a run asks for.</p>
+<p>A run asks for csvdt's arguments in the minibuffer, as a line the way a shell
+takes one. The line starts as <code>*csvdt-default-arguments*</code>, which is <code>-H -p</code>, and
+is left selected. The prompt names the csvdt that will run.</p>
+<div class="tablewrap"><table>
+<thead>
+<tr><th>Key</th><th>What it does</th></tr>
+</thead>
+<tbody>
+<tr><td>type anything</td><td>replaces the prefill</td></tr>
+<tr><td><kbd>RIGHT</kbd> or <kbd>C-f</kbd></td><td>keeps it, to add to</td></tr>
+<tr><td><kbd>RET</kbd></td><td>runs it as it stands</td></tr>
+<tr><td><kbd>TAB</kbd></td><td>completes the option before the cursor</td></tr>
+<tr><td><kbd>M-p</kbd> and <kbd>M-n</kbd></td><td>back and forth through lines run before</td></tr>
+</tbody></table></div>
+<p>The prefill is selected, not only offered, because leaving <code>-H</code> off a file with
+a header is loud, while passing it to a file without one is quiet. The first row
+is then taken for a header and goes through unconverted.</p>
+<h2 id="03-arguments--how-the-line-is-split"><span class="num">3.1</span> How the line is split</h2>
+<p>The line is split as a shell splits it, and not on commas, because a comma is
+csvdt's own separator inside a value (<code>-a 1,0</code>, <code>-i 0,replace</code>). Either kind of
+quote works.</p>
+<ul>
+<li>Double quotes take <code>\t</code>, <code>\n</code>, <code>\r</code>, <code>\\</code> and <code>\&quot;</code>. Any other backslash is
+  refused, so <code>&quot;C:\data&quot;</code> is refused rather than misread.</li>
+<li>Single quotes take everything as it is.</li>
+<li>Outside quotes a backslash is itself.</li>
+</ul>
+<p>Nothing is run through a shell.</p>
+<h2 id="03-arguments--file-names"><span class="num">3.2</span> File names</h2>
+<p>A file name in the line is refused. These commands give csvdt the lines on its
+standard input, and a named file would take their place in a result that looks
+exactly like a run over them.</p>
+<p>Only a name that is a file on disk is refused. Which arguments are values and
+which are file names comes from <code>csvdt --list-options</code>, so <code>-u 0</code> with a file
+called <code>0</code> lying about is still a run.</p>
+<h2 id="03-arguments--what-csvdt-reports"><span class="num">3.3</span> What csvdt reports</h2>
+<p>The help is csvdt's own <code>--help</code>, read from the program each time. The options
+offered for completion come from <code>csvdt --list-options</code>. The package keeps them
+against the program's real path and the time it was written, so a rebuilt csvdt
+is asked again and an unchanged one is not run just to find that out. A csvdt
+too old to list its options has them read from <code>--help</code> instead.</p>
+<p>Nothing in the package needs updating when csvdt changes. Only three options
+are named, each in a setting, because a run over part of a buffer cannot be
+worked out without them: the header option, the single quote and the read
+delimiter. The tests hold each to an option csvdt still reports, and fail if any
+other option csvdt reports is named in the package.</p>
+</section>
+<section class="chapter" id="04-running-and-the-output">
+<h1 id="04-running-and-the-output--running-and-the-output">Running, and the output</h1>
+<p class="lead">What happens while csvdt runs, and where the result goes.</p>
+<h2 id="04-running-and-the-output--a-run-is-a-job"><span class="num">4.1</span> A run is a job</h2>
+<p>A quick run looks instant. One that takes more than half a second carries on in
+the background with the editor free. The letter <code>P</code> is lit in the mode line,
+<kbd>C-x j</kbd> lists the job, and <kbd>C-x J</kbd> (<code>M-x stop-job</code>) ends csvdt. A second run
+over the same buffer while one is going is refused, not queued.</p>
+<h2 id="04-running-and-the-output--the-output-buffer"><span class="num">4.2</span> The output buffer</h2>
+<p>The output goes to <code>*csvdt output*</code>, in the major mode <code>*csvdt-output-mode*</code>
+names, <code>csv-mode</code> by default. When that mode cannot be entered the buffer is
+left in <code>fundamental-mode</code>, so a result csvdt has made is not lost.</p>
+<p>The buffer is one to edit. Sort its lines, or run csvdt on it again to feed a
+result back through. Lines banked in the previous result are let go, because the
+text they stood for is gone.</p>
+<h2 id="04-running-and-the-output--the-echo-area"><span class="num">4.3</span> The echo area</h2>
+<p>The source buffer is never changed. On success the echo area gives the line
+count, the stretches when there was more than one, the widening notes of
+chapter 2, and anything csvdt said on stderr about a run that still succeeded:</p>
+<pre class="ex">csvdt -H -p -u0 -i 0,replace: 3 lines from 2 stretches
+</pre>
+<p>On failure it gives csvdt's own reason and exit status. What csvdt wrote before
+failing is shown in <code>*csvdt output*</code>, except when the run was fed from that
+buffer, whose text is kept:</p>
+<pre class="ex">csvdt exited 100: '--utc' was given &quot;0-i&quot;, which is not a column number.
+</pre>
+</section>
+<section class="chapter" id="05-settings-and-the-csvdt-program">
+<h1 id="05-settings-and-the-csvdt-program--settings-and-the-csvdt-program">Settings and the csvdt program</h1>
+<p class="lead">The package's settings, and how to point it at a csvdt that is not on the PATH.</p>
+<p>Each setting has its help in <kbd>C-h v</kbd>. Chapter 6 lists them with their defaults.
+Set them in the init file, after <code>:config</code> of <code>load-package</code>.</p>
+<h2 id="05-settings-and-the-csvdt-program--the-csvdt-program"><span class="num">5.1</span> The csvdt program</h2>
+<p><code>*csvdt-program*</code> is a name, looked for on the PATH, or a full path from <code>/</code> or
+<code>~</code>. A full path is the file that is run, and it is never looked for on the
+PATH. A relative path such as <code>&quot;./target/release/csvdt&quot;</code> is refused, because it
+would run whatever file of that name stands beside the CSV file.</p>
+<pre class="ex"><code class="language-lisp">(load-package &quot;csvdt&quot; :source &quot;https://github.com/Tuatara-Editor/tuatara-csvdt&quot;
+  :config
+  (setf *csvdt-program* &quot;~/src/csvdt/target/release/csvdt&quot;))
+</code></pre>
+<h2 id="05-settings-and-the-csvdt-program--the-arguments"><span class="num">5.2</span> The arguments</h2>
+<p><code>*csvdt-default-arguments*</code> is the text the argument line starts with. The
+default, <code>-H -p</code>, suits a file with a header row, the header printed. Use
+<code>&quot;&quot;</code> for none.</p>
+<h2 id="05-settings-and-the-csvdt-program--the-header"><span class="num">5.3</span> The header</h2>
+<p><code>*csvdt-region-carries-header*</code> is <code>t</code> or <code>nil</code>. See chapter 2, &quot;The header&quot;.</p>
+<h2 id="05-settings-and-the-csvdt-program--the-names-of-csvdts-options"><span class="num">5.4</span> The names of csvdt's options</h2>
+<p>Three settings name the csvdt options the package has to recognise, each a list
+of texts. They change only if csvdt renames an option. <code>nil</code> means none is
+recognised.</p>
+<ul>
+<li><code>*csvdt-header-options*</code>: the options that say the first record is a header,
+  <code>-H</code> and <code>--has-header</code>.</li>
+<li><code>*csvdt-single-quote-options*</code>: the options that make <code>' the quote
+  character, =--single-quote</code>.</li>
+<li><code>*csvdt-read-delimiter-options*</code>: the options that set the delimiter fields
+  are read with, <code>--read-delimiter</code>.</li>
+</ul>
+<h2 id="05-settings-and-the-csvdt-program--the-output-mode"><span class="num">5.5</span> The output mode</h2>
+<p><code>*csvdt-output-mode*</code> is the major mode of <code>*csvdt output*</code>. See chapter 4.</p>
+<h2 id="05-settings-and-the-csvdt-program--tests"><span class="num">5.6</span> Tests</h2>
+<p><kbd>tools/test.sh</kbd> in the package runs its tests. The runs of csvdt need a program
+to run: <code>CSVDT=/path/to/csvdt</code> names it, else the one on the PATH is used.
+Without one those tests are skipped, not passed.</p>
+</section>
+<section class="chapter" id="06-every-command-and-setting">
+<h1 id="06-every-command-and-setting--every-command-and-setting">Every command and setting</h1>
+<p class="lead">Each command and setting of the csvdt package, to look one up by name.</p>
+<p>The tables are made from the program each time this manual is made, so they
+never list a command or setting that the package does not have. The first
+table has four columns. The first two are keys: the modal keys, which work only
+with modal editing on, and the non-modal keys, which work with it off too. A
+command with no key says <kbd>M-x</kbd> and its name in the second column, because you
+can only run it by its name. The third column is the name of the command and the
+fourth says what it does.</p>
+<p>To run a command by its name, press <kbd>M-x</kbd>, type a few letters of the name and
+press <kbd>RET</kbd>. To find a command from within the editor, press <kbd>C-h f</kbd>. To find
+the command that a key runs, press <kbd>C-h k</kbd> and then the key. The editor's own
+settings and commands are in chapters 21 and 22 of its manual.</p>
+<h2 id="06-every-command-and-setting--every-command"><span class="num">6.1</span> Every command</h2>
+<div class="tablewrap"><table>
+<thead>
+<tr><th>Modal</th><th>Non-modal</th><th>Command</th><th>What it does</th></tr>
+</thead>
+<tbody>
+<tr><td>none</td><td><kbd>C-c v ?</kbd></td><td><code>csvdt-describe-run</code></td><td>Say what M-x csvdt-run-dwim would cover, and from what, without running anything: for when a run covered more or less than expected.</td></tr>
+<tr><td>none</td><td><kbd>C-c v h</kbd></td><td><code>csvdt-help</code></td><td>Show csvdt's own –help, read from the program each time, so that it is always that of the csvdt that runs.</td></tr>
+<tr><td>none</td><td><kbd>C-c v k</kbd></td><td><code>csvdt-run-banked</code></td><td>Run csvdt over the banked lines (C-z m l) with arguments read in the minibuffer, all of them as one file in the order of the buffer: a duration is measured across what was banked, not across what lies between.</td></tr>
+<tr><td>none</td><td><kbd>C-c v b</kbd></td><td><code>csvdt-run-buffer</code></td><td>Run csvdt over the whole buffer with arguments read in the minibuffer (M-x csvdt-run-dwim says how they are read); show what it writes in <strong>csvdt output</strong>.</td></tr>
+<tr><td>none</td><td><kbd>C-c v r</kbd></td><td><code>csvdt-run-dwim</code></td><td>Run csvdt over the banked lines and the selection together, or with neither over the whole buffer; show what it writes in <strong>csvdt output</strong>.</td></tr>
+<tr><td>none</td><td><kbd>C-c v SPC</kbd></td><td><code>csvdt-run-region</code></td><td>Run csvdt over the lines of the selection with arguments read in the minibuffer: to try something on a few rows before the whole file.</td></tr>
+<tr><td>none</td><td><kbd>C-c v v</kbd></td><td><code>csvdt-version</code></td><td>Say which csvdt runs, and which time zone database is built into it.</td></tr>
+</tbody></table></div>
+<h2 id="06-every-command-and-setting--every-setting"><span class="num">6.2</span> Every setting</h2>
+<div class="tablewrap"><table>
+<thead>
+<tr><th>Setting</th><th>Default</th><th>Values</th><th>What it changes</th></tr>
+</thead>
+<tbody>
+<tr><td><code>*csvdt-default-arguments*</code></td><td><code>&quot;-H -p&quot;</code></td><td>text</td><td>The arguments a csvdt command line starts with, selected.</td></tr>
+<tr><td><code>*csvdt-header-options*</code></td><td><code>(&quot;-H&quot; &quot;--has-header&quot;)</code></td><td>a list, each text</td><td>The csvdt options saying the first record is a header.</td></tr>
+<tr><td><code>*csvdt-output-mode*</code></td><td><code>csv-mode</code></td><td>a function</td><td>The major mode of <strong>csvdt output</strong>.</td></tr>
+<tr><td><code>*csvdt-program*</code></td><td><code>&quot;csvdt&quot;</code></td><td>text</td><td>The csvdt program to run.</td></tr>
+<tr><td><code>*csvdt-read-delimiter-options*</code></td><td><code>(&quot;--read-delimiter&quot;)</code></td><td>a list, each text</td><td>The csvdt options setting the delimiter fields are read with.</td></tr>
+<tr><td><code>*csvdt-region-carries-header*</code></td><td><code>t</code></td><td>t, nil</td><td>Whether the buffer's header line goes in front of a selection or banked lines below it, when the arguments ask for a header.</td></tr>
+<tr><td><code>*csvdt-single-quote-options*</code></td><td><code>(&quot;--single-quote&quot;)</code></td><td>a list, each text</td><td>The csvdt options making ' the quote character.</td></tr>
+</tbody></table></div>
+</section>
+</article>
+</main>
+</div>
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src  'self'; img-src 'self' file:; script-src 'self'; base-uri 'none'; form-action 'none'">
+<title>What the csvdt package is &ndash; csvdt Manual</title>
+<link rel="icon" href="tuatara.png">
+<link rel="stylesheet" href="manual.css">
+<script src="manual.js" defer></script>
+</head>
+<body>
+<div class="site">
+<nav class="toc" id="contents" aria-label="Contents">
+<strong>csvdt Manual</strong>
+<small>for Tuatara 0.90.28 and later</small>
+<p class="tools"><a href="all.html">All on one page</a>
+<button type="button" class="theme" hidden>Dark</button></p>
+<input type="search" placeholder="Search the manual" aria-label="Search the manual">
+<ol class="chapters"><li id="nav-index"><a href="index.html">0 Contents</a></li><li id="nav-01-what-the-csvdt-package-is" class="here"><a class="here" href="01-what-the-csvdt-package-is.html">1 What the csvdt package is</a><ol><li><a href="01-what-the-csvdt-package-is.html#the-keys">1.1 The keys</a></li><li><a href="01-what-the-csvdt-package-is.html#if-csvdt-is-not-found">1.2 If csvdt is not found</a></li></ol></li><li id="nav-02-what-gets-processed"><a href="02-what-gets-processed.html">2 What gets processed</a><ol><li><a href="02-what-gets-processed.html#whole-records">2.1 Whole records</a></li><li><a href="02-what-gets-processed.html#the-header">2.2 The header</a></li><li><a href="02-what-gets-processed.html#what-decides-where-a-record-begins">2.3 What decides where a record begins</a></li><li><a href="02-what-gets-processed.html#the-bytes">2.4 The bytes</a></li></ol></li><li id="nav-03-arguments"><a href="03-arguments.html">3 Arguments</a><ol><li><a href="03-arguments.html#how-the-line-is-split">3.1 How the line is split</a></li><li><a href="03-arguments.html#file-names">3.2 File names</a></li><li><a href="03-arguments.html#what-csvdt-reports">3.3 What csvdt reports</a></li></ol></li><li id="nav-04-running-and-the-output"><a href="04-running-and-the-output.html">4 Running, and the output</a><ol><li><a href="04-running-and-the-output.html#a-run-is-a-job">4.1 A run is a job</a></li><li><a href="04-running-and-the-output.html#the-output-buffer">4.2 The output buffer</a></li><li><a href="04-running-and-the-output.html#the-echo-area">4.3 The echo area</a></li></ol></li><li id="nav-05-settings-and-the-csvdt-program"><a href="05-settings-and-the-csvdt-program.html">5 Settings and the csvdt program</a><ol><li><a href="05-settings-and-the-csvdt-program.html#the-csvdt-program">5.1 The csvdt program</a></li><li><a href="05-settings-and-the-csvdt-program.html#the-arguments">5.2 The arguments</a></li><li><a href="05-settings-and-the-csvdt-program.html#the-header">5.3 The header</a></li><li><a href="05-settings-and-the-csvdt-program.html#the-names-of-csvdts-options">5.4 The names of csvdt's options</a></li><li><a href="05-settings-and-the-csvdt-program.html#the-output-mode">5.5 The output mode</a></li><li><a href="05-settings-and-the-csvdt-program.html#tests">5.6 Tests</a></li></ol></li><li id="nav-06-every-command-and-setting"><a href="06-every-command-and-setting.html">6 Every command and setting</a><ol><li><a href="06-every-command-and-setting.html#every-command">6.1 Every command</a></li><li><a href="06-every-command-and-setting.html#every-setting">6.2 Every setting</a></li></ol></li></ol>
+</nav>
+<main>
+<article>
+<div class="node"><span>Next: <a href="02-what-gets-processed.html">What gets processed</a></span><span>Up: <a href="index.html">Contents</a></span></div>
+<h1 id="what-the-csvdt-package-is">What the csvdt package is</h1>
+<p class="lead">The package that runs the csvdt program over the records of a CSV buffer.</p>
+<p>csvdt converts the timestamps and durations in the records of a CSV file. The
+package hands it whole records from the buffer, in the background, and shows
+what csvdt writes in a buffer of its own, <code>*csvdt output*</code>. The buffer the
+records came from is never changed.</p>
+<p>csvdt is a program of its own, installed apart from Tuatara. Its options and
+what they do are in its own help; <kbd>C-c v h</kbd> shows it. This manual covers what
+the package adds: which records are sent, how the arguments are typed, and what
+happens to the result.</p>
+<h2 id="the-keys"><span class="num">1.1</span> The keys</h2>
+<p>In a CSV or TSV (tab-separated values) buffer, the keys are under <kbd>C-c v</kbd>.
+Tuatara labels the prefix <code>csvdt</code> in its key help.</p>
+<div class="tablewrap"><table>
+<thead>
+<tr><th>Key</th><th>Command</th><th>What it runs csvdt over</th></tr>
+</thead>
+<tbody>
+<tr><td><kbd>C-c v r</kbd></td><td><code>csvdt-run-dwim</code></td><td>banked lines and selection, else all</td></tr>
+<tr><td><kbd>C-c v b</kbd></td><td><code>csvdt-run-buffer</code></td><td>the whole buffer</td></tr>
+<tr><td><kbd>C-c v SPC</kbd></td><td><code>csvdt-run-region</code></td><td>the selection</td></tr>
+<tr><td><kbd>C-c v k</kbd></td><td><code>csvdt-run-banked</code></td><td>the banked lines</td></tr>
+<tr><td><kbd>C-c v ?</kbd></td><td><code>csvdt-describe-run</code></td><td>nothing: says what a run would cover</td></tr>
+<tr><td><kbd>C-c v h</kbd></td><td><code>csvdt-help</code></td><td>nothing: shows csvdt's <code>--help</code></td></tr>
+<tr><td><kbd>C-c v v</kbd></td><td><code>csvdt-version</code></td><td>nothing: says which csvdt runs</td></tr>
+</tbody></table></div>
+<p>In any other buffer the commands are run with <kbd>M-x</kbd>, or from a key of your own
+in the init file:</p>
+<pre class="ex"><code class="language-lisp">(bind-key &quot;; c&quot; 'csvdt-run-dwim :map :leader)   ; SPC ; c
+</code></pre>
+<h2 id="if-csvdt-is-not-found"><span class="num">1.2</span> If csvdt is not found</h2>
+<p><kbd>M-x check-health</kbd> says whether Tuatara finds csvdt. When it does not, chapter 5
+says how to name its path.</p>
+<div class="node end"><span>Next: <a href="02-what-gets-processed.html">What gets processed</a></span><span>Up: <a href="index.html">Contents</a></span></div>
+</article>
+</main>
+</div>
+</body>
+</html>

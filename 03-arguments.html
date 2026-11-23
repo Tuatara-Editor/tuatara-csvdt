@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src  'self'; img-src 'self' file:; script-src 'self'; base-uri 'none'; form-action 'none'">
+<title>Arguments &ndash; csvdt Manual</title>
+<link rel="icon" href="tuatara.png">
+<link rel="stylesheet" href="manual.css">
+<script src="manual.js" defer></script>
+</head>
+<body>
+<div class="site">
+<nav class="toc" id="contents" aria-label="Contents">
+<strong>csvdt Manual</strong>
+<small>for Tuatara 0.90.28 and later</small>
+<p class="tools"><a href="all.html">All on one page</a>
+<button type="button" class="theme" hidden>Dark</button></p>
+<input type="search" placeholder="Search the manual" aria-label="Search the manual">
+<ol class="chapters"><li id="nav-index"><a href="index.html">0 Contents</a></li><li id="nav-01-what-the-csvdt-package-is"><a href="01-what-the-csvdt-package-is.html">1 What the csvdt package is</a><ol><li><a href="01-what-the-csvdt-package-is.html#the-keys">1.1 The keys</a></li><li><a href="01-what-the-csvdt-package-is.html#if-csvdt-is-not-found">1.2 If csvdt is not found</a></li></ol></li><li id="nav-02-what-gets-processed"><a href="02-what-gets-processed.html">2 What gets processed</a><ol><li><a href="02-what-gets-processed.html#whole-records">2.1 Whole records</a></li><li><a href="02-what-gets-processed.html#the-header">2.2 The header</a></li><li><a href="02-what-gets-processed.html#what-decides-where-a-record-begins">2.3 What decides where a record begins</a></li><li><a href="02-what-gets-processed.html#the-bytes">2.4 The bytes</a></li></ol></li><li id="nav-03-arguments" class="here"><a class="here" href="03-arguments.html">3 Arguments</a><ol><li><a href="03-arguments.html#how-the-line-is-split">3.1 How the line is split</a></li><li><a href="03-arguments.html#file-names">3.2 File names</a></li><li><a href="03-arguments.html#what-csvdt-reports">3.3 What csvdt reports</a></li></ol></li><li id="nav-04-running-and-the-output"><a href="04-running-and-the-output.html">4 Running, and the output</a><ol><li><a href="04-running-and-the-output.html#a-run-is-a-job">4.1 A run is a job</a></li><li><a href="04-running-and-the-output.html#the-output-buffer">4.2 The output buffer</a></li><li><a href="04-running-and-the-output.html#the-echo-area">4.3 The echo area</a></li></ol></li><li id="nav-05-settings-and-the-csvdt-program"><a href="05-settings-and-the-csvdt-program.html">5 Settings and the csvdt program</a><ol><li><a href="05-settings-and-the-csvdt-program.html#the-csvdt-program">5.1 The csvdt program</a></li><li><a href="05-settings-and-the-csvdt-program.html#the-arguments">5.2 The arguments</a></li><li><a href="05-settings-and-the-csvdt-program.html#the-header">5.3 The header</a></li><li><a href="05-settings-and-the-csvdt-program.html#the-names-of-csvdts-options">5.4 The names of csvdt's options</a></li><li><a href="05-settings-and-the-csvdt-program.html#the-output-mode">5.5 The output mode</a></li><li><a href="05-settings-and-the-csvdt-program.html#tests">5.6 Tests</a></li></ol></li><li id="nav-06-every-command-and-setting"><a href="06-every-command-and-setting.html">6 Every command and setting</a><ol><li><a href="06-every-command-and-setting.html#every-command">6.1 Every command</a></li><li><a href="06-every-command-and-setting.html#every-setting">6.2 Every setting</a></li></ol></li></ol>
+</nav>
+<main>
+<article>
+<div class="node"><span>Previous: <a href="02-what-gets-processed.html">What gets processed</a></span><span>Next: <a href="04-running-and-the-output.html">Running, and the output</a></span><span>Up: <a href="index.html">Contents</a></span></div>
+<h1 id="arguments">Arguments</h1>
+<p class="lead">The line of csvdt options a run asks for.</p>
+<p>A run asks for csvdt's arguments in the minibuffer, as a line the way a shell
+takes one. The line starts as <code>*csvdt-default-arguments*</code>, which is <code>-H -p</code>, and
+is left selected. The prompt names the csvdt that will run.</p>
+<div class="tablewrap"><table>
+<thead>
+<tr><th>Key</th><th>What it does</th></tr>
+</thead>
+<tbody>
+<tr><td>type anything</td><td>replaces the prefill</td></tr>
+<tr><td><kbd>RIGHT</kbd> or <kbd>C-f</kbd></td><td>keeps it, to add to</td></tr>
+<tr><td><kbd>RET</kbd></td><td>runs it as it stands</td></tr>
+<tr><td><kbd>TAB</kbd></td><td>completes the option before the cursor</td></tr>
+<tr><td><kbd>M-p</kbd> and <kbd>M-n</kbd></td><td>back and forth through lines run before</td></tr>
+</tbody></table></div>
+<p>The prefill is selected, not only offered, because leaving <code>-H</code> off a file with
+a header is loud, while passing it to a file without one is quiet. The first row
+is then taken for a header and goes through unconverted.</p>
+<h2 id="how-the-line-is-split"><span class="num">3.1</span> How the line is split</h2>
+<p>The line is split as a shell splits it, and not on commas, because a comma is
+csvdt's own separator inside a value (<code>-a 1,0</code>, <code>-i 0,replace</code>). Either kind of
+quote works.</p>
+<ul>
+<li>Double quotes take <code>\t</code>, <code>\n</code>, <code>\r</code>, <code>\\</code> and <code>\&quot;</code>. Any other backslash is
+  refused, so <code>&quot;C:\data&quot;</code> is refused rather than misread.</li>
+<li>Single quotes take everything as it is.</li>
+<li>Outside quotes a backslash is itself.</li>
+</ul>
+<p>Nothing is run through a shell.</p>
+<h2 id="file-names"><span class="num">3.2</span> File names</h2>
+<p>A file name in the line is refused. These commands give csvdt the lines on its
+standard input, and a named file would take their place in a result that looks
+exactly like a run over them.</p>
+<p>Only a name that is a file on disk is refused. Which arguments are values and
+which are file names comes from <code>csvdt --list-options</code>, so <code>-u 0</code> with a file
+called <code>0</code> lying about is still a run.</p>
+<h2 id="what-csvdt-reports"><span class="num">3.3</span> What csvdt reports</h2>
+<p>The help is csvdt's own <code>--help</code>, read from the program each time. The options
+offered for completion come from <code>csvdt --list-options</code>. The package keeps them
+against the program's real path and the time it was written, so a rebuilt csvdt
+is asked again and an unchanged one is not run just to find that out. A csvdt
+too old to list its options has them read from <code>--help</code> instead.</p>
+<p>Nothing in the package needs updating when csvdt changes. Only three options
+are named, each in a setting, because a run over part of a buffer cannot be
+worked out without them: the header option, the single quote and the read
+delimiter. The tests hold each to an option csvdt still reports, and fail if any
+other option csvdt reports is named in the package.</p>
+<div class="node end"><span>Previous: <a href="02-what-gets-processed.html">What gets processed</a></span><span>Next: <a href="04-running-and-the-output.html">Running, and the output</a></span><span>Up: <a href="index.html">Contents</a></span></div>
+</article>
+</main>
+</div>
+</body>
+</html>

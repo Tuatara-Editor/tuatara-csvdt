@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src  'self'; img-src 'self' file:; script-src 'self'; base-uri 'none'; form-action 'none'">
+<title>What gets processed &ndash; csvdt Manual</title>
+<link rel="icon" href="tuatara.png">
+<link rel="stylesheet" href="manual.css">
+<script src="manual.js" defer></script>
+</head>
+<body>
+<div class="site">
+<nav class="toc" id="contents" aria-label="Contents">
+<strong>csvdt Manual</strong>
+<small>for Tuatara 0.90.28 and later</small>
+<p class="tools"><a href="all.html">All on one page</a>
+<button type="button" class="theme" hidden>Dark</button></p>
+<input type="search" placeholder="Search the manual" aria-label="Search the manual">
+<ol class="chapters"><li id="nav-index"><a href="index.html">0 Contents</a></li><li id="nav-01-what-the-csvdt-package-is"><a href="01-what-the-csvdt-package-is.html">1 What the csvdt package is</a><ol><li><a href="01-what-the-csvdt-package-is.html#the-keys">1.1 The keys</a></li><li><a href="01-what-the-csvdt-package-is.html#if-csvdt-is-not-found">1.2 If csvdt is not found</a></li></ol></li><li id="nav-02-what-gets-processed" class="here"><a class="here" href="02-what-gets-processed.html">2 What gets processed</a><ol><li><a href="02-what-gets-processed.html#whole-records">2.1 Whole records</a></li><li><a href="02-what-gets-processed.html#the-header">2.2 The header</a></li><li><a href="02-what-gets-processed.html#what-decides-where-a-record-begins">2.3 What decides where a record begins</a></li><li><a href="02-what-gets-processed.html#the-bytes">2.4 The bytes</a></li></ol></li><li id="nav-03-arguments"><a href="03-arguments.html">3 Arguments</a><ol><li><a href="03-arguments.html#how-the-line-is-split">3.1 How the line is split</a></li><li><a href="03-arguments.html#file-names">3.2 File names</a></li><li><a href="03-arguments.html#what-csvdt-reports">3.3 What csvdt reports</a></li></ol></li><li id="nav-04-running-and-the-output"><a href="04-running-and-the-output.html">4 Running, and the output</a><ol><li><a href="04-running-and-the-output.html#a-run-is-a-job">4.1 A run is a job</a></li><li><a href="04-running-and-the-output.html#the-output-buffer">4.2 The output buffer</a></li><li><a href="04-running-and-the-output.html#the-echo-area">4.3 The echo area</a></li></ol></li><li id="nav-05-settings-and-the-csvdt-program"><a href="05-settings-and-the-csvdt-program.html">5 Settings and the csvdt program</a><ol><li><a href="05-settings-and-the-csvdt-program.html#the-csvdt-program">5.1 The csvdt program</a></li><li><a href="05-settings-and-the-csvdt-program.html#the-arguments">5.2 The arguments</a></li><li><a href="05-settings-and-the-csvdt-program.html#the-header">5.3 The header</a></li><li><a href="05-settings-and-the-csvdt-program.html#the-names-of-csvdts-options">5.4 The names of csvdt's options</a></li><li><a href="05-settings-and-the-csvdt-program.html#the-output-mode">5.5 The output mode</a></li><li><a href="05-settings-and-the-csvdt-program.html#tests">5.6 Tests</a></li></ol></li><li id="nav-06-every-command-and-setting"><a href="06-every-command-and-setting.html">6 Every command and setting</a><ol><li><a href="06-every-command-and-setting.html#every-command">6.1 Every command</a></li><li><a href="06-every-command-and-setting.html#every-setting">6.2 Every setting</a></li></ol></li></ol>
+</nav>
+<main>
+<article>
+<div class="node"><span>Previous: <a href="01-what-the-csvdt-package-is.html">What the csvdt package is</a></span><span>Next: <a href="03-arguments.html">Arguments</a></span><span>Up: <a href="index.html">Contents</a></span></div>
+<h1 id="what-gets-processed">What gets processed</h1>
+<p class="lead">Which lines go to csvdt, and how they are widened to whole records.</p>
+<p><code>csvdt-run-dwim</code> takes the banked lines and the selection together, merged so a
+line in both goes once. With neither, it takes the whole buffer.</p>
+<p>Banked lines are Tuatara's own (<code>bank-lines</code>, <kbd>m l</kbd> in normal state). They go to
+csvdt as one file in buffer order, so a duration is measured across what was
+banked rather than across the lines between. Running over them leaves them
+banked.</p>
+<p>The selection is taken as <kbd>y</kbd> and <kbd>d</kbd> take it: a line selection whole, a
+rectangle by the rows it spans. A rectangle's columns are ignored, because
+picking columns is csvdt's job (<code>--remove</code>, <code>-a</code>). A run takes the main
+selection only, not the places of several cursors or of a split.</p>
+<p><code>csvdt-describe-run</code> says what a run would cover, without running it. It has no
+line of arguments to read yet, so it reads them from
+<code>*csvdt-default-arguments*</code>. It works in the background too.</p>
+<h2 id="whole-records"><span class="num">2.1</span> Whole records</h2>
+<p>Whatever was picked, whole records are what go out.</p>
+<ul>
+<li>A selection that starts or ends inside a line takes the whole line. The run
+  says <code>, selection widened to whole lines</code>.</li>
+<li>A quoted field can hold a line end, so a record is not always a line. The
+  range is pushed out to record boundaries, and the run says <code>, widened to
+  whole records: a quoted field spans lines</code>. Finding the boundaries reads the
+  buffer once, quote to quote, from its start to the last range, as part of the
+  run in the background. A whole-buffer run reads nothing.</li>
+<li>Two banked lines inside one multi-line record widen to the same record, and
+  it is sent once.</li>
+</ul>
+<h2 id="the-header"><span class="num">2.2</span> The header</h2>
+<p>When the arguments ask for a header and what is sent starts below it, the
+buffer's header record goes in front. Then csvdt does not take the first
+selected row for the header. Set <code>*csvdt-region-carries-header*</code> to <code>nil</code> to
+stop this. csvdt then takes the first selected row for the header without
+saying so, and that row goes through unconverted.</p>
+<h2 id="what-decides-where-a-record-begins"><span class="num">2.3</span> What decides where a record begins</h2>
+<p><code>--single-quote</code> and <code>--read-delimiter</code> are read from the arguments before any
+of the above, because they decide where a record begins. A quote only opens a
+field where a field begins, and that depends on the delimiter. The names of
+the options that do this are in settings, chapter 5.</p>
+<h2 id="the-bytes"><span class="num">2.4</span> The bytes</h2>
+<p>The buffer's bytes go to csvdt as they are. A file that is not UTF-8 reaches
+csvdt as it is on disk, and csvdt refuses it in its own words. Line ends are
+sent as <code>\n</code> when the buffer's are <code>\r\n</code>.</p>
+<div class="node end"><span>Previous: <a href="01-what-the-csvdt-package-is.html">What the csvdt package is</a></span><span>Next: <a href="03-arguments.html">Arguments</a></span><span>Up: <a href="index.html">Contents</a></span></div>
+</article>
+</main>
+</div>
+</body>
+</html>
