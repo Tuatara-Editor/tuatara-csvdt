@@ -1,0 +1,12 @@
+#+title: csvdt manual: chapters
+
+Each chapter covers one part of the csvdt package, with its commands, keys and
+settings. The last chapter lists every command and setting, generated from the
+source.
+
+1. What the csvdt package is
+2. What gets processed
+3. Arguments
+4. Running, and the output
+5. Settings and the csvdt program
+6. Every command and setting

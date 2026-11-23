@@ -1,0 +1,44 @@
+#+title: What the csvdt package is
+#+language: en
+
+* What the csvdt package is
+
+The package that runs the csvdt program over the records of a CSV buffer.
+
+csvdt converts the timestamps and durations in the records of a CSV file. The
+package hands it the buffer, in the background, and shows what csvdt writes in
+a buffer of its own, =*csvdt output*=. The buffer is never changed.
+
+csvdt is a program of its own, installed apart from Tuatara. The package needs
+csvdt 1.2.0 or later, which takes a selection itself; an older one is refused
+with a message saying so. Its options and what they do are in its own help;
+~C-c v h~ shows it. This manual covers what the package adds: which lines a run
+covers, how the arguments are typed, and what happens to the result.
+
+** The keys
+
+In a CSV or TSV (tab-separated values) buffer, the keys are under ~C-c v~.
+Tuatara labels the prefix =csvdt= in its key help.
+
+| Key         | Command             | What it runs csvdt over                 |
+|-------------+---------------------+-----------------------------------------|
+| ~C-c v r~   | =csvdt-run-dwim=    | banked lines and selection, else all |
+| ~C-c v b~   | =csvdt-run-buffer=  | the whole buffer                        |
+| ~C-c v SPC~ | =csvdt-run-region=  | the selection |
+| ~C-c v k~   | =csvdt-run-banked=  | the banked lines                        |
+| ~C-c v ?~   | =csvdt-describe-run= | nothing: says what a run would cover   |
+| ~C-c v h~   | =csvdt-help=        | nothing: shows csvdt's =--help=         |
+| ~C-c v v~   | =csvdt-version=     | nothing: says which csvdt runs |
+
+In any other buffer the commands are run with ~M-x~, or from a key of your own
+in the init file:
+
+#+begin_src lisp
+(bind-key "; c" 'csvdt-run-dwim :map :leader)   ; SPC ; c
+#+end_src
+
+** If csvdt is not found
+
+~M-x check-health~ says whether Tuatara finds csvdt. When it does not, chapter 5
+says how to name its path. ~C-c v v~ says which csvdt runs; the version is asked
+once for each program found, not at each run.

@@ -1,0 +1,58 @@
+#+title: Arguments
+#+language: en
+
+* Arguments
+
+The line of csvdt options a run asks for.
+
+A run asks for csvdt's arguments in the minibuffer, as a line the way a shell
+takes one. The line starts as =*csvdt-default-arguments*=, which is =-H -p=, and
+is left selected. The prompt names the csvdt that will run.
+
+| Key           | What it does                                     |
+|---------------+--------------------------------------------------|
+| type anything | replaces the prefill                             |
+| ~RIGHT~ or ~C-f~ | keeps it, to add to                           |
+| ~RET~         | runs it as it stands                             |
+| ~TAB~         | completes the option before the cursor |
+| ~M-p~ and ~M-n~ | back and forth through lines run before        |
+
+The prefill is selected, not only offered, because leaving =-H= off a file with
+a header is loud, while passing it to a file without one is quiet. The first row
+is then taken for a header and goes through unconverted.
+
+** How the line is split
+
+The line is split as a shell splits it, and not on commas, because a comma is
+csvdt's own separator inside a value (=-a 1,0=, =-i 0,replace=). Either kind of
+quote works.
+
+- Double quotes take =\t=, =\n=, =\r=, =\\= and =\"=. Any other backslash is
+  refused, so ="C:\data"= is refused rather than misread.
+- Single quotes take everything as it is.
+- Outside quotes a backslash is itself.
+
+Nothing is run through a shell.
+
+** File names
+
+A file name in the line is refused. These commands give csvdt the lines on its
+standard input, and a named file would take their place in a result that looks
+exactly like a run over them.
+
+Only a name that is a file on disk is refused. Which arguments are values and
+which are file names comes from =csvdt --list-options=, so =-u 0= with a file
+called =0= lying about is still a run.
+
+** What csvdt reports
+
+The help is csvdt's own =--help=, read from the program each time. The options
+offered for completion come from =csvdt --list-options=. The package keeps them
+against the program's real path and the time it was written, so a rebuilt csvdt
+is asked again and an unchanged one is not run just to find that out. A csvdt
+too old to list its options has them read from =--help= instead.
+
+Nothing in the package needs updating when csvdt changes. Only one option is
+named, =--lines=, which tells csvdt which lines a run over part of a buffer
+means. The tests hold it to an option csvdt still reports, and fail if any
+other option csvdt reports is named in the package.

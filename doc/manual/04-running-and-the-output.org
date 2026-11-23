@@ -1,0 +1,65 @@
+#+title: Running, and the output
+#+language: en
+
+* Running, and the output
+
+What happens while csvdt runs, and where the result goes.
+
+** A run is a job
+
+A quick run looks instant. One that takes more than half a second carries on in
+the background with the editor free. The letter =P= is lit in the mode line,
+~C-x j~ lists the job, and ~C-x J~ (=M-x stop-job=) ends csvdt. A second run
+over the same buffer while one is going is refused, not queued.
+
+csvdt runs shut in by the sandbox (=bwrap=): it reads the lines on its standard
+input and sees the system's programs and libraries, and itself, read only, and
+nothing else of yours. Without the sandbox it does not run, and the echo area
+says why.
+
+** The output buffer
+
+The output goes to =*csvdt output*=, in the major mode =*csvdt-output-mode*=
+names, =csv-mode= by default. When that mode cannot be entered the buffer is
+left in =fundamental-mode=, so a result csvdt has made is not lost.
+
+The buffer is one to edit. Sort its lines, or run csvdt on it again to feed a
+result back through. Lines banked in the previous result are let go, because the
+text they stood for is gone.
+
+** How much csvdt may write
+
+What csvdt writes is held in the editor's memory until it is in the buffer, so a
+run may write at most =*csvdt-output-multiple*= times its input, eight by
+default, and never less than 64 MB. Whatever those say, it may never write more
+than a quarter of the editor's free memory as the run starts. Most runs write about as much as they read.
+Some options write far more: =-f=widest= pads every record to the widest one,
+so a file with one very wide record and many short ones grows many times over.
+A run that writes more than its limit is ended, nothing of it is shown, and the
+echo area says so:
+
+#+begin_example
+csvdt was ended: it wrote more than 64.0 MB, 8 times its input (*csvdt-output-multiple*) or 64.0 MB at least, and no more than a quarter of the memory free; nothing is shown
+#+end_example
+
+Raise =*csvdt-output-multiple*= for such a run when the computer has the memory
+for it (chapter 5). The quarter of free memory is not a setting: a run that
+reaches it would leave the editor too little to go on.
+
+** The echo area
+
+The source buffer is never changed. On success the echo area gives the line
+count, the stretches when there was more than one, the widening notes of
+chapter 2, and anything csvdt said on stderr about a run that still succeeded:
+
+#+begin_example
+csvdt -H -p -u0 -i 0,replace: 3 lines from 2 stretches
+#+end_example
+
+On failure it gives csvdt's own reason and how it ended. What csvdt wrote before
+failing is shown in =*csvdt output*=, except when the run was fed from that
+buffer, whose text is kept:
+
+#+begin_example
+csvdt exited with an error: '--utc' was given "0-i", which is not a column number.
+#+end_example

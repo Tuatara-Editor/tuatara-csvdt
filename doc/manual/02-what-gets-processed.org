@@ -1,0 +1,55 @@
+#+title: What gets processed
+#+language: en
+
+* What gets processed
+
+Which lines a run covers, and what csvdt takes of them.
+
+=csvdt-run-dwim= takes the banked lines and the selection together, merged so a
+line in both goes once. With neither, it takes the whole buffer.
+
+Banked lines are Tuatara's own (=bank-lines=, ~m l~ in normal state). csvdt
+writes them in buffer order, whatever order they were banked in. Running over
+them leaves them banked.
+
+The selection is taken as ~y~ and ~d~ take it: a line selection whole, a
+rectangle by the rows it spans. A rectangle's columns are ignored, because
+picking columns is csvdt's job (=--remove=, =-a=). A run takes the main
+selection only, not the places of several cursors or of a split.
+
+=csvdt-describe-run= says what a run would cover, without running it. It has no
+line of arguments to read. It counts whole lines, as they go to csvdt, and says
+nothing of the widening csvdt does to reach whole records.
+
+** What csvdt is given
+
+csvdt is given the whole buffer, or the part it is narrowed to, as its input
+file. A run over the whole buffer says nothing more. A run over banked lines or
+a selection adds =--lines= with the lines picked, counted from 1 at the start of
+the input, as in =--lines 3-5,9,20-22=. csvdt reads the input as it reads any
+file and keeps every record that touches a selected line, whole, in input
+order, each once. The output is what a run over the whole buffer writes for
+those records. The package reads nothing of the text as CSV.
+
+So csvdt decides where a record begins, which lines are comments (=--comment=)
+and which record is the header. Under =-H -p= the header is the buffer's first
+record and is printed once at the top, whether or not it was selected. With a
+selection or banked lines, a duration (=-d= with one column) is measured from
+the row before the first one taken, taken or not.
+
+- A selection that starts or ends inside a line takes the whole line. The run
+  says =, selection widened to whole lines=.
+- A quoted field can hold a line end, so a record is not always a line. When
+  csvdt takes lines the selection did not name, the run says =, widened to
+  whole records: lines 2-3=, naming every line it took.
+- A narrowing that begins or ends inside a line hands csvdt that line in part.
+  The run says =, first line cut short by the narrowing= (or the last, or both).
+  A narrowing that cuts a quoted field at a line end is csvdt's to report.
+- A selection of only comment or blank lines gives an empty result, and csvdt
+  says so.
+
+** The bytes
+
+The buffer's bytes go to csvdt as they are. A file that is not UTF-8 reaches
+csvdt as it is on disk, and csvdt refuses it in its own words. Line ends are
+sent as =\n= when the buffer's are =\r\n=.
