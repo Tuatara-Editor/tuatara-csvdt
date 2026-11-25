@@ -159,24 +159,27 @@ is a relative path."
                (t (or (find-program path)
                       (error "~a cannot be run: chmod +x it, or set *csvdt-program* to one that can" path))))))))
 
-(defun csvdt-output-of (&rest arguments)
+(defun csvdt-output-of (arguments &key (interruptible t))
   "What csvdt writes when run with ARGUMENTS and no input; NIL when it fails,
 so that a csvdt declining them is gone around rather than broken on. At most
-ten seconds, the editor reading keys meanwhile, \\`C-g' giving up."
+ten seconds; with INTERRUPTIBLE, for a command, the editor reading keys
+meanwhile and \\`C-g' giving up, else the thread asking simply waits."
   (multiple-value-bind (output ok)
       (program-output (cons (csvdt-program) arguments)
                       :seconds 10
-                      :wait (lambda (thread seconds)
-                              (wait-interruptibly thread :message "Asking csvdt..." :seconds seconds)))
+                      :wait (and interruptible
+                                 (lambda (thread seconds)
+                                   (wait-interruptibly thread :message "Asking csvdt..." :seconds seconds))))
     (and ok output)))
 
-(defun csvdt-version-string ()
-  "csvdt's --version line, which names the time zone database built into it."
-  (string-trim '(#\Space #\Newline) (or (csvdt-output-of "--version") "")))
+(defun csvdt-version-string (&key (interruptible t))
+  "csvdt's --version line, which names the time zone database built into it;
+INTERRUPTIBLE as CSVDT-OUTPUT-OF takes it."
+  (string-trim '(#\Space #\Newline) (or (csvdt-output-of '("--version") :interruptible interruptible) "")))
 
-(defun csvdt-help-text ()
-  "csvdt's --help."
-  (or (csvdt-output-of "--help") (error "~a --help failed" *csvdt-program*)))
+(defun csvdt-help-text (&key (interruptible t))
+  "csvdt's --help; INTERRUPTIBLE as CSVDT-OUTPUT-OF takes it."
+  (or (csvdt-output-of '("--help") :interruptible interruptible) (error "~a --help failed" *csvdt-program*)))
 
 ;;; Its options, from its own list
 
@@ -207,19 +210,48 @@ not known, and CSVDT-FILE-ARGUMENTS guesses at no filenames without it."
                 records))))
     (nreverse records)))
 
-(defun csvdt-option-records ()
+(defun csvdt-option-records (&key (interruptible t))
   "csvdt's options as records (CSVDT-PARSE-OPTION-LIST), from its own list,
 else from its --help; kept while the program is the same file, unchanged
-\(*CSVDT-OPTIONS-CACHE*)."
+\(*CSVDT-OPTIONS-CACHE*). INTERRUPTIBLE as CSVDT-OUTPUT-OF takes it."
   (let* ((program (csvdt-program))
          (stamp (path-stamp program)))
     (if (and (equal (first *csvdt-options-cache*) program)
              (equalp (second *csvdt-options-cache*) stamp))
         (nthcdr 3 *csvdt-options-cache*)
-        (let ((records (or (csvdt-parse-option-list (csvdt-output-of "--list-options"))
-                           (csvdt-parse-help (csvdt-help-text)))))
-          (setf *csvdt-options-cache* (list* program stamp (csvdt-version-string) records))
+        (let ((records (or (csvdt-parse-option-list
+                            (csvdt-output-of '("--list-options") :interruptible interruptible))
+                           (csvdt-parse-help (csvdt-help-text :interruptible interruptible)))))
+          (setf *csvdt-options-cache*
+                (list* program stamp (csvdt-version-string :interruptible interruptible) records))
           records))))
+
+(define-record (csvdt-options-job (:include job) (:constructor make-csvdt-options-job (buffer)) (:copier nil))
+  "Asking csvdt for its options and its version in the background, kept for
+the commands (CSVDT-OPTION-RECORDS).")
+
+(define-job-words csvdt-options-job
+  :doing "Asking csvdt for its options"
+  :description "Asking csvdt for its options and its version"
+  :verb "ask csvdt for its options"
+  :left-words "nothing asked"
+  :at-exit :quiet)
+
+(defmethod job-take-in ((job csvdt-options-job))
+  "Nothing to take in: what csvdt said is kept already."
+  nil)
+
+(defun csvdt-ask-options-soon ()
+  "Have csvdt's options and version asked in the background while a command
+line is typed, so that completing an option and the run after it find them
+kept; a csvdt that cannot be asked is said by the command that needs it."
+  (unless (some #'csvdt-options-job-p (jobs-of (current-buffer) :running t))
+    (start-job-thread (make-csvdt-options-job (current-buffer))
+                      (lambda (job)
+                        (declare (ignore job))
+                        (handler-case (csvdt-option-records :interruptible nil)
+                          (error () nil)))
+                      :name "tuatara csvdt options")))
 
 (defun csvdt-cached-version ()
   "csvdt's version line, asked with its options rather than at each command."
@@ -278,8 +310,9 @@ as *CSVDT-DEFAULT-ARGUMENTS*, selected: typing replaces it,
 \\[minibuffer-finish] runs it as it is. \\[minibuffer-complete] completes
 the option before the cursor, and \\[minibuffer-previous-history] and
 \\[minibuffer-next-history] go back and forth through the lines run before.
-The prompt names the csvdt that will run."
-  (let ((line (read-string (format nil "csvdt arguments (~a): " (csvdt-cached-version))
+csvdt's options are asked in the background meanwhile (CSVDT-ASK-OPTIONS-SOON)."
+  (csvdt-ask-options-soon)
+  (let ((line (read-string "csvdt arguments: "
                            :initial *csvdt-default-arguments* :select-initial t
                            :complete #'csvdt-complete-argument :history *csvdt-history*)))
     (unless (equal line (first *csvdt-history*))

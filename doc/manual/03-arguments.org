@@ -7,7 +7,8 @@ The line of csvdt options a run asks for.
 
 A run asks for csvdt's arguments in the minibuffer, as a line the way a shell
 takes one. The line starts as =*csvdt-default-arguments*=, which is =-H -p=, and
-is left selected. The prompt names the csvdt that will run.
+is left selected. =C-c v v= says which csvdt will run. Its options are asked
+for in the background while you type, for completion.
 
 | Key           | What it does                                     |
 |---------------+--------------------------------------------------|

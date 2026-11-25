@@ -457,6 +457,26 @@ line total."
           (is string= "csvdt 9.9.9" result)
           (true (tuatara.frontend.fake:fake-frame-showing f "Asking csvdt... (C-g stops waiting)")))))))
 
+(define-test (csvdt arguments-asked-without-waiting)
+  ;; the prompt asks at once, naming no version: csvdt's options are asked in the background meanwhile
+  (let ((prompt nil) (started '()))
+    (sb-int:encapsulate 'tuatara:read-string 'csvdt-prompt
+                        (lambda (function asked &rest keys)
+                          (declare (ignore function keys))
+                          (setf prompt asked)
+                          "-p"))
+    (sb-int:encapsulate 'tuatara:start-job-thread 'csvdt-prompt
+                        (lambda (function job &rest arguments)
+                          (declare (ignore function arguments))
+                          (push job started)))
+    (unwind-protect
+         (let ((csvdt::*csvdt-history* '()) (csvdt::*csvdt-program* "/nowhere/csvdt"))
+           (is equal '("-p") (csvdt::csvdt-read-arguments)))
+      (sb-int:unencapsulate 'tuatara:read-string 'csvdt-prompt)
+      (sb-int:unencapsulate 'tuatara:start-job-thread 'csvdt-prompt))
+    (is string= "csvdt arguments: " prompt)
+    (true (some #'csvdt::csvdt-options-job-p started))))
+
 (define-test (csvdt relative-program-refused)
   ;; a relative program would be whatever file of that name stands beside the CSV file
   (let ((csvdt::*csvdt-program* "./target/release/csvdt"))
