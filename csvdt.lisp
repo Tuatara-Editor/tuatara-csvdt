@@ -1,10 +1,11 @@
 ;;;; csvdt.lisp --- csvdt run over a buffer, a selection or banked lines, its result in a buffer of its own.
 ;;;; Copyright (C) 2025-2026 Michael A Jones.  GPL-3.0-or-later; see LICENSE.
-;;;; Needs: Tuatara 0.90.40
+;;;; Needs: Tuatara 0.90.47
 ;;;;
 ;;;; A package, not part of the editor: loaded by (load-package "csvdt") in
-;;;; the init file. It drives csvdt (github.com/YardQuit/csvdt), a program of
-;;;; its own that converts the timestamps and durations of CSV records.
+;;;; the init file. It drives csvdt (github.com/YardQuit/csvdt), a
+;;;; program of its own that converts the timestamps and durations of CSV
+;;;; records.
 ;;;;
 ;;;; Almost nothing about csvdt's options is written down here. The help is
 ;;;; csvdt's own --help, and the options offered for completion come from
@@ -45,48 +46,9 @@
 Typing replaces them, \\<minibuffer>\\[minibuffer-forward-char] keeps them to
 add to, \\[minibuffer-finish] runs them as they are. The default is for a file
 with a header row, the header printed. Text with csvdt's options in it, \"\" for
-none.
-
-They are selected rather than only offered because the two mistakes are not
-alike. Leaving the header option off a file that has a header is loud: the
-header comes back as parse_err. Giving it to a file that has none is quiet:
-the first row is taken for a header and, by where the conversion puts its
-column, either goes through unconverted or is lost. Arguments to be noticed
-and deleted point at the quiet mistake; arguments to be kept do not."
+none. For a file without a header row, type over -H, or its first row is
+taken for a header."
   :values string)
-
-(define-package-setting *csvdt-region-carries-header* t
-  "Obsolete: no longer read, and removed in the next major version.
-It said whether the buffer's header line went in front of a selection or
-banked lines below it. csvdt is now given the whole buffer and the lines
-selected, and under its header option the buffer's first record is always the
-header, which is what t gave."
-  :values boolean)
-
-(define-package-setting *csvdt-header-options* '("-H" "--has-header")
-  "Obsolete: no longer read, and removed in the next major version.
-It named the csvdt options saying the first record is a header, for
-*CSVDT-REGION-CARRIES-HEADER*. csvdt now reads the header itself."
-  :values (list-of string))
-
-(define-package-setting *csvdt-single-quote-options* '("--single-quote")
-  "Obsolete: no longer read, and removed in the next major version.
-It named the csvdt options making ' the quote character, for finding where a
-record begins. csvdt now finds that itself."
-  :values (list-of string))
-
-(define-package-setting *csvdt-read-delimiter-options* '("--read-delimiter")
-  "Obsolete: no longer read, and removed in the next major version.
-It named the csvdt options setting the delimiter fields are read with, for
-finding where a record begins. csvdt now finds that itself."
-  :values (list-of string))
-
-(define-package-setting *csvdt-comment-options* '("--comment")
-  "Obsolete: no longer read, and removed in the next major version.
-It named the csvdt options naming a comment character, with which a run over
-part of the buffer was refused. csvdt now reads comment lines in such a run as
-in any other."
-  :values (list-of string))
 
 (define-package-setting *csvdt-output-mode* 'csv-mode
   "The major mode of *csvdt output*.
@@ -214,17 +176,16 @@ not known, and CSVDT-FILE-ARGUMENTS guesses at no filenames without it."
   "csvdt's options as records (CSVDT-PARSE-OPTION-LIST), from its own list,
 else from its --help; kept while the program is the same file, unchanged
 \(*CSVDT-OPTIONS-CACHE*). INTERRUPTIBLE as CSVDT-OUTPUT-OF takes it."
-  (let* ((program (csvdt-program))
-         (stamp (path-stamp program)))
-    (if (and (equal (first *csvdt-options-cache*) program)
-             (equalp (second *csvdt-options-cache*) stamp))
-        (nthcdr 3 *csvdt-options-cache*)
-        (let ((records (or (csvdt-parse-option-list
+  (if (csvdt-options-kept-p)
+      (nthcdr 3 *csvdt-options-cache*)
+      (let* ((program (csvdt-program))
+             (stamp (path-stamp program))
+             (records (or (csvdt-parse-option-list
                             (csvdt-output-of '("--list-options") :interruptible interruptible))
                            (csvdt-parse-help (csvdt-help-text :interruptible interruptible)))))
-          (setf *csvdt-options-cache*
-                (list* program stamp (csvdt-version-string :interruptible interruptible) records))
-          records))))
+        (setf *csvdt-options-cache*
+              (list* program stamp (csvdt-version-string :interruptible interruptible) records))
+        records)))
 
 (define-record (csvdt-options-job (:include job) (:constructor make-csvdt-options-job (buffer)) (:copier nil))
   "Asking csvdt for its options and its version in the background, kept for
@@ -241,12 +202,23 @@ the commands (CSVDT-OPTION-RECORDS).")
   "Nothing to take in: what csvdt said is kept already."
   nil)
 
-(defun csvdt-ask-options-soon ()
-  "Have csvdt's options and version asked in the background while a command
-line is typed, so that completing an option and the run after it find them
-kept; a csvdt that cannot be asked is said by the command that needs it."
-  (unless (some #'csvdt-options-job-p (jobs-of (current-buffer) :running t))
-    (start-job-thread (make-csvdt-options-job (current-buffer))
+(defun csvdt-options-kept-p ()
+  "True when csvdt's options are kept for the program csvdt is now, unchanged
+since they were asked (*CSVDT-OPTIONS-CACHE*)."
+  (let ((program (csvdt-program)))
+    (and (equal (first *csvdt-options-cache*) program)
+         (equalp (second *csvdt-options-cache*) (path-stamp program)))))
+
+(defun csvdt-ask-options-soon (&optional (buffer (current-buffer)))
+  "Have csvdt's options and version asked in the background for BUFFER, as a
+CSV buffer opens and while a command line is typed, so that completing an
+option and the run after it find them kept; nothing when they are kept
+already. A csvdt that cannot be asked is said by the command that needs it."
+  (unless (or (handler-case (csvdt-options-kept-p)
+                ;; no csvdt to ask: the command that needs it says why
+                (error () t))
+              (some #'csvdt-options-job-p (jobs-of buffer :running t)))
+    (start-job-thread (make-csvdt-options-job buffer)
                       (lambda (job)
                         (declare (ignore job))
                         (handler-case (csvdt-option-records :interruptible nil)
@@ -628,8 +600,8 @@ buffer to edit and run csvdt on again, and undo brings back what it held
 before. Lines banked in that are let go, the text they stood for being
 gone."
   (let ((out (find-or-make-buffer *csvdt-output-name*)))
-    (setf (buffer-banks out) nil
-          (buffer-mark-active-p out) nil)
+    (clear-banks out)
+    (setf (buffer-mark-active-p out) nil)
     (delete-spans out (list (cons 0 (buffer-size out))) :replacements (list octets))
     ;; entered after the text is in, so that csv-mode finds its separator in it
     (handler-case (set-major-mode out *csvdt-output-mode*)
@@ -816,11 +788,13 @@ always that of the csvdt that runs."
 (defun install-csvdt ()
   "Bind the csvdt commands in CSV and tab-separated values (TSV) buffers under
 \\`C-c v': r \\[csvdt-run-dwim], b the buffer, SPC the selection, k the banked
-lines, ? \\[csvdt-describe-run], h the help, v the version."
+lines, ? \\[csvdt-describe-run], h the help, v the version; have csvdt's options
+asked as such a buffer opens (CSVDT-ASK-OPTIONS-SOON)."
   (define-keys (mode-keymap 'csv-mode)
                '(("C-c v r" csvdt-run-dwim) ("C-c v b" csvdt-run-buffer) ("C-c v SPC" csvdt-run-region)
                  ("C-c v k" csvdt-run-banked) ("C-c v ?" csvdt-describe-run) ("C-c v h" csvdt-help)
                  ("C-c v v" csvdt-version)))
-  (label-keys (mode-keymap 'csv-mode) '(("C-c v" "csvdt"))))
+  (label-keys (mode-keymap 'csv-mode) '(("C-c v" "csvdt")))
+  (add-mode-hook 'csv-mode 'csvdt-ask-options-soon))
 
 (install-csvdt)

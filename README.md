@@ -3,11 +3,11 @@
 Read the manual:
 [tuatara-editor.github.io/tuatara-csvdt](https://tuatara-editor.github.io/tuatara-csvdt/).
 
-[csvdt](https://github.com/YardQuit/csvdt) run over a CSV buffer, a selection
-or banked lines, the result in a buffer of its own, `*csvdt output*`. csvdt
-converts the timestamps and durations of CSV records; this package hands it
-the buffer, in the background, and never changes the buffer it came from. One of the Tuatara project's packages, not part of the
-editor.
+[csvdt](https://github.com/YardQuit/csvdt) run over a CSV buffer, a
+selection or banked lines, the result in a buffer of its own, `*csvdt output*`.
+csvdt converts the timestamps and durations of CSV records; this package hands
+it the buffer, in the background, and never changes the buffer it came from. One
+of the Tuatara project's packages, not part of the editor.
 
 `C-c v` in a CSV buffer shows its commands. The manual says which lines a run
 covers, how the arguments are typed and what the settings do. A run over a
@@ -25,7 +25,7 @@ memory; past that it is ended and the echo area says so.
 
 ## What it needs
 
-- Tuatara 0.90.40 or later.
+- Tuatara 0.90.47 or later.
 - csvdt 1.2.0 or later, a program of its own, installed apart from Tuatara. An
   older one is refused with a message saying so.
 - bwrap (bubblewrap), the sandbox csvdt runs in.
@@ -92,10 +92,10 @@ internet".
 
 ## Credits
 
-- csvdt, by the same author
-  ([github.com/YardQuit/csvdt](https://github.com/YardQuit/csvdt)): the
-  program this package runs, and where the timestamp and duration conversion
-  comes from.
+- csvdt, by Michael A Jones
+  ([github.com/YardQuit/csvdt](https://github.com/YardQuit/csvdt)):
+  the program this package runs, and where the timestamp and duration
+  conversion comes from.
 
 ## License
 

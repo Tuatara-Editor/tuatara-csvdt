@@ -148,13 +148,10 @@ the lines of a selection told to csvdt, and csvdt run over a buffer, a selection
       (true (member "--flexible=" reported :test #'string=)))))
 
 (define-test (csvdt csvdt-names-no-other-option)
-  ;; options are csvdt's to report: none but --lines is named in the package, bar the defaults of the
-  ;; obsolete settings that named options
+  ;; options are csvdt's to report: none but --lines is named in the package
   (with-csvdt ()
     (let* ((source (alexandria:read-file-into-string *csvdt-test-source*))
-           (allowed (append '("--list-options" "--help" "--version" "--lines")
-                            csvdt::*csvdt-header-options* csvdt::*csvdt-single-quote-options*
-                            csvdt::*csvdt-read-delimiter-options* csvdt::*csvdt-comment-options*)))
+           (allowed '("--list-options" "--help" "--version" "--lines")))
       (dolist (option (csvdt::csvdt-options))
         (let ((option (string-right-trim "=" option)))
           (unless (or (member option allowed :test #'string=) (< (length option) 3))
@@ -208,6 +205,32 @@ killed first; the frontend, the editor and the output."
     ;; the source is never changed
     (csvdt-test-run "M-x c s v d t - r u n - b u f f e r RET - H SPC - u 0 RET")
     (is string= *csvdt-test-text* (tuatara.buffer:buffer-string (tuatara.buffer:find-buffer "*scratch*")))))
+
+(define-test (csvdt csvdt-options-asked-as-a-csv-buffer-opens)
+  ;; a buffer turning to CSV mode has csvdt's options asked in the background, once while they are kept;
+  ;; with no csvdt to ask, the buffer opens all the same and nothing is asked
+  (let ((started '()) (kept nil))
+    (sb-int:encapsulate 'tuatara:start-job-thread 'held
+                        (lambda (f job work &rest arguments)
+                          (declare (ignore f work arguments))
+                          (push job started)))
+    (sb-int:encapsulate 'csvdt::csvdt-options-kept-p 'told (lambda (f) (declare (ignore f)) kept))
+    (unwind-protect
+         (flet ((open-csv (name)
+                  (let ((buffer (tuatara.buffer:make-buffer name :text "a,b")))
+                    (unwind-protect (tuatara.modes:set-major-mode buffer 'tuatara:csv-mode)
+                      (tuatara.buffer:kill-buffer buffer)))))
+           (open-csv "csvdt asked")
+           (is = 1 (count-if #'csvdt::csvdt-options-job-p started))
+           (setf kept t)
+           (open-csv "csvdt kept")
+           (is = 1 (count-if #'csvdt::csvdt-options-job-p started))
+           (sb-int:unencapsulate 'csvdt::csvdt-options-kept-p 'told)
+           (let ((csvdt::*csvdt-program* "no-such-csvdt-program") (csvdt::*csvdt-options-cache* nil))
+             (open-csv "csvdt missing"))
+           (is = 1 (count-if #'csvdt::csvdt-options-job-p started)))
+      (sb-int:unencapsulate 'csvdt::csvdt-options-kept-p 'told)
+      (sb-int:unencapsulate 'tuatara:start-job-thread 'held))))
 
 (define-test (csvdt csvdt-keys-in-csv-mode)
   (with-csvdt ()
@@ -386,7 +409,7 @@ pads every record to the wide one, so what csvdt writes grows as WIDTH squared."
                 :width 120)
       (is string= *csvdt-test-utc* (csvdt-test-output))
       (is eq out (tuatara.buffer:find-buffer "*csvdt output*"))
-      (false (tuatara:buffer-banks out))
+      (false (tuatara:banked-p out))
       (finish (tuatara:check-writable out)))))
 
 (define-test (csvdt csvdt-refusals)
@@ -458,7 +481,8 @@ line total."
           (true (tuatara.frontend.fake:fake-frame-showing f "Asking csvdt... (C-g stops waiting)")))))))
 
 (define-test (csvdt arguments-asked-without-waiting)
-  ;; the prompt asks at once, naming no version: csvdt's options are asked in the background meanwhile
+  ;; the prompt asks at once, naming no version: csvdt's options are asked in the background meanwhile;
+  ;; any program that is there stands in for csvdt, since a missing one is not asked
   (let ((prompt nil) (started '()))
     (sb-int:encapsulate 'tuatara:read-string 'csvdt-prompt
                         (lambda (function asked &rest keys)
@@ -470,7 +494,8 @@ line total."
                           (declare (ignore function arguments))
                           (push job started)))
     (unwind-protect
-         (let ((csvdt::*csvdt-history* '()) (csvdt::*csvdt-program* "/nowhere/csvdt"))
+         (let ((csvdt::*csvdt-history* '()) (csvdt::*csvdt-options-cache* nil)
+               (csvdt::*csvdt-program* (tuatara:find-program "sh")))
            (is equal '("-p") (csvdt::csvdt-read-arguments)))
       (sb-int:unencapsulate 'tuatara:read-string 'csvdt-prompt)
       (sb-int:unencapsulate 'tuatara:start-job-thread 'csvdt-prompt))

@@ -27,20 +27,6 @@ would run whatever file of that name stands beside the CSV file.
 default, =-H -p=, suits a file with a header row, the header printed. Use
 =""= for none.
 
-** Obsolete settings
-
-Five settings fed the package's own reading of the buffer as CSV, which csvdt
-now does itself (chapter 2). They are obsolete: they do nothing, and are
-removed in the next major version. Setting one is harmless.
-
-- =*csvdt-region-carries-header*=: whether the buffer's header went in front of
-  a selection. csvdt always takes the buffer's first record for the header now.
-- =*csvdt-header-options*=, =*csvdt-single-quote-options*=,
-  =*csvdt-read-delimiter-options*= and =*csvdt-comment-options*=: the names of
-  the options saying the first record is a header, making =' the quote
-  character, setting the delimiter fields are read with, and naming a comment
-  character. A run over part of a buffer under =--comment= is no longer refused.
-
 ** The output mode
 
 =*csvdt-output-mode*= is the major mode of =*csvdt output*=. See chapter 4.
